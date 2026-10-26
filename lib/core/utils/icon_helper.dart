@@ -6,8 +6,11 @@ class IconHelper {
   static IconData getIconData(String iconName) {
     switch (iconName) {
       case 'restaurant_rounded':
-      case 'fastfood':
+      case 'restaurant':
         return Icons.restaurant_rounded;
+      case 'fastfood_rounded':
+      case 'fastfood':
+        return Icons.fastfood_rounded;
       case 'directions_car_rounded':
       case 'directions_car':
         return Icons.directions_car_rounded;
@@ -23,6 +26,12 @@ class IconHelper {
       case 'medical_services_rounded':
       case 'medical_services':
         return Icons.medical_services_rounded;
+      case 'school_rounded':
+      case 'school':
+        return Icons.school_rounded;
+      case 'phone_android_rounded':
+      case 'phone':
+        return Icons.phone_android_rounded;
       case 'payments_rounded':
       case 'payments':
         return Icons.payments_rounded;
@@ -32,12 +41,46 @@ class IconHelper {
       case 'card_giftcard_rounded':
       case 'card_giftcard':
         return Icons.card_giftcard_rounded;
+      case 'redeem_rounded':
+      case 'redeem':
+        return Icons.redeem_rounded;
+      case 'arrow_downward_rounded':
+        return Icons.arrow_downward_rounded;
+      case 'arrow_upward_rounded':
+        return Icons.arrow_upward_rounded;
+      case 'credit_card_rounded':
+      case 'credit_card':
+        return Icons.credit_card_rounded;
+      case 'add_circle_outline_rounded':
+        return Icons.add_circle_outline_rounded;
+      case 'remove_circle_outline_rounded':
+        return Icons.remove_circle_outline_rounded;
+      case 'trending_up_rounded':
+        return Icons.trending_up_rounded;
       case 'more_horiz_rounded':
       case 'more_horiz':
         return Icons.more_horiz_rounded;
       case 'wallet':
       case 'account_balance_wallet':
+      case 'account_balance_wallet_rounded':
         return Icons.account_balance_wallet_rounded;
+      case 'flag_rounded':
+      case 'flag':
+        return Icons.flag_rounded;
+      case 'emoji_events_rounded':
+      case 'trophy':
+        return Icons.emoji_events_rounded;
+      case 'laptop_rounded':
+      case 'laptop':
+        return Icons.laptop_rounded;
+      case 'flight_rounded':
+      case 'flight':
+        return Icons.flight_rounded;
+      case 'home_rounded':
+      case 'home':
+        return Icons.home_rounded;
+      case 'today_rounded':
+        return Icons.today_rounded;
       default:
         return Icons.category_rounded;
     }

@@ -33,3 +33,7 @@ class AnimatedRupiahCounter extends StatelessWidget {
     );
   }
 }
+
+/// Alias untuk AnimatedRupiahCounter
+typedef AnimatedCurrency = AnimatedRupiahCounter;
+

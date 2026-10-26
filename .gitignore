@@ -30,6 +30,7 @@ migrate_working_dir/
 .pub/
 /build/
 *.zip
+*.apk
 
 # Symbol processing related
 app.*.symbols

@@ -15,13 +15,27 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (Migrator m) async {
       await m.createAll();
       await _seedInitialData();
+    },
+    onUpgrade: (Migrator m, int from, int to) async {
+      if (from < 2) {
+        // Migrasi Tahap 10: reset dan re-create database untuk 4 jenis catatan
+        for (final table in allTables) {
+          await m.deleteTable(table.actualTableName);
+        }
+        await m.createAll();
+        await _seedInitialData();
+      }
+      if (from < 3) {
+        // Tahap 13: Kosongkan data contoh pencapaian lama jika ada
+        await delete(savingGoals).go();
+      }
     },
   );
 

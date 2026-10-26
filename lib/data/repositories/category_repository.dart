@@ -12,6 +12,8 @@ abstract class CategoryRepository {
   Future<List<CategoryItem>> getCategoriesByType(String type);
   Stream<List<CategoryItem>> watchAllCategories();
   Stream<List<CategoryItem>> watchCategoriesByType(String type);
+  Future<List<CategoryItem>> getCategoriesByLedger(String ledger, {String? type});
+  Stream<List<CategoryItem>> watchCategoriesByLedger(String ledger, {String? type});
 }
 
 class InMemoryCategoryRepository implements CategoryRepository {
@@ -33,7 +35,9 @@ class InMemoryCategoryRepository implements CategoryRepository {
   }
 
   void _notify() {
-    _controller.add(List.unmodifiable(_categories.values));
+    if (!_controller.isClosed) {
+      _controller.add(List.unmodifiable(_categories.values));
+    }
   }
 
   @override
@@ -81,14 +85,37 @@ class InMemoryCategoryRepository implements CategoryRepository {
   }
 
   @override
-  Stream<List<CategoryItem>> watchAllCategories() {
-    return _controller.stream;
+  Stream<List<CategoryItem>> watchAllCategories() async* {
+    yield _categories.values.toList();
+    yield* _controller.stream;
   }
 
   @override
-  Stream<List<CategoryItem>> watchCategoriesByType(String type) {
-    return _controller.stream.map(
+  Stream<List<CategoryItem>> watchCategoriesByType(String type) async* {
+    yield await getCategoriesByType(type);
+    yield* _controller.stream.map(
       (list) => list.where((c) => c.type == type).toList(),
+    );
+  }
+
+  @override
+  Future<List<CategoryItem>> getCategoriesByLedger(String ledger, {String? type}) async {
+    return _categories.values.where((c) {
+      final matchesLedger = c.ledger == ledger;
+      final matchesType = type == null || c.type == type;
+      return matchesLedger && matchesType;
+    }).toList();
+  }
+
+  @override
+  Stream<List<CategoryItem>> watchCategoriesByLedger(String ledger, {String? type}) async* {
+    yield await getCategoriesByLedger(ledger, type: type);
+    yield* _controller.stream.map(
+      (list) => list.where((c) {
+        final matchesLedger = c.ledger == ledger;
+        final matchesType = type == null || c.type == type;
+        return matchesLedger && matchesType;
+      }).toList(),
     );
   }
 

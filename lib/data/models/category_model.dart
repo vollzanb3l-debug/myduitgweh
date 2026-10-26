@@ -4,6 +4,7 @@ class CategoryItem {
   final String icon; // Nama identifier ikon
   final String colorHex;
   final String type; // 'income', 'expense'
+  final String ledger; // 'daily', 'balance', 'saving'
 
   const CategoryItem({
     this.id,
@@ -11,6 +12,7 @@ class CategoryItem {
     required this.icon,
     required this.colorHex,
     required this.type,
+    this.ledger = 'daily',
   });
 
   CategoryItem copyWith({
@@ -19,6 +21,7 @@ class CategoryItem {
     String? icon,
     String? colorHex,
     String? type,
+    String? ledger,
   }) {
     return CategoryItem(
       id: id ?? this.id,
@@ -26,6 +29,7 @@ class CategoryItem {
       icon: icon ?? this.icon,
       colorHex: colorHex ?? this.colorHex,
       type: type ?? this.type,
+      ledger: ledger ?? this.ledger,
     );
   }
 
@@ -36,6 +40,7 @@ class CategoryItem {
       'icon': icon,
       'color_hex': colorHex,
       'type': type,
+      'ledger': ledger,
     };
   }
 
@@ -46,6 +51,7 @@ class CategoryItem {
       icon: map['icon'] as String,
       colorHex: map['color_hex'] as String,
       type: map['type'] as String,
+      ledger: (map['ledger'] as String?) ?? 'daily',
     );
   }
 
@@ -58,7 +64,8 @@ class CategoryItem {
           name == other.name &&
           icon == other.icon &&
           colorHex == other.colorHex &&
-          type == other.type;
+          type == other.type &&
+          ledger == other.ledger;
 
   @override
   int get hashCode =>
@@ -66,5 +73,6 @@ class CategoryItem {
       name.hashCode ^
       icon.hashCode ^
       colorHex.hashCode ^
-      type.hashCode;
+      type.hashCode ^
+      ledger.hashCode;
 }

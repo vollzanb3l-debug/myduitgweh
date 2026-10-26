@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/models/duit_type.dart';
+import '../../../core/providers/app_state_provider.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/icon_helper.dart';
 import '../../../core/widgets/widgets.dart';
@@ -15,10 +17,15 @@ class StatisticsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final filter = ref.watch(statsFilterProvider);
     final statsAsync = ref.watch(statisticsDataProvider);
+    final activeDuit = ref.watch(activeDuitProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Statistik Keuangan'),
+        title: Text(
+          activeDuit.isSemua
+              ? 'Statistik Semua Duit'
+              : 'Statistik ${activeDuit.label}',
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -26,6 +33,11 @@ class StatisticsScreen extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Filter Jenis Catatan (Semua / Harian / Saldo / Tabungan / Pencapaian)
+              _buildLedgerFilter(context, ref, filter),
+
+              const SizedBox(height: 12),
+
               // 1. Pemilih Periode & Panah Navigasi
               _buildPeriodSelector(context, ref, filter),
 
@@ -33,6 +45,8 @@ class StatisticsScreen extends ConsumerWidget {
 
               statsAsync.when(
                 data: (data) {
+                  final isEmpty = data.totalIncome == 0 && data.totalExpense == 0;
+
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -41,25 +55,37 @@ class StatisticsScreen extends ConsumerWidget {
 
                       const SizedBox(height: 20),
 
-                      // 2. Ringkasan: Pemasukan, Pengeluaran, dan Selisih
-                      _buildSummaryCard(context, data),
+                      if (isEmpty) ...[
+                        const SizedBox(height: 20),
+                        EmptyState(
+                          title:
+                              'Belum Ada Transaksi ${activeDuit.isSemua ? '' : activeDuit.label}',
+                          message:
+                              'Belum ada data ${activeDuit.isSemua ? '' : 'untuk ${activeDuit.label} '}pada periode ${data.periodLabel.toLowerCase()}.',
+                          icon: Icons.bar_chart_rounded,
+                        ),
+                        const SizedBox(height: 40),
+                      ] else ...[
+                        // 2. Ringkasan: Pemasukan, Pengeluaran, dan Selisih
+                        _buildSummaryCard(context, data),
 
-                      const SizedBox(height: 24),
+                        const SizedBox(height: 24),
 
-                      // 3. Donut Chart Pengeluaran per Kategori
-                      _buildCategoryPieChartSection(context, data),
+                        // 3. Donut Chart Pengeluaran per Kategori
+                        _buildCategoryPieChartSection(context, data),
 
-                      const SizedBox(height: 24),
+                        const SizedBox(height: 24),
 
-                      // 4. Bar Chart Perbandingan Pemasukan vs Pengeluaran
-                      _buildComparisonBarChartSection(context, data),
+                        // 4. Bar Chart Perbandingan Pemasukan vs Pengeluaran
+                        _buildComparisonBarChartSection(context, data),
 
-                      const SizedBox(height: 24),
+                        const SizedBox(height: 24),
 
-                      // 5. Daftar Pengeluaran Terbesar (Top 3)
-                      _buildTopCategoriesSection(context, data),
+                        // 5. Daftar Pengeluaran Terbesar (Top 3)
+                        _buildTopCategoriesSection(context, data),
 
-                      const SizedBox(height: 32),
+                        const SizedBox(height: 32),
+                      ],
                     ],
                   );
                 },
@@ -67,16 +93,89 @@ class StatisticsScreen extends ConsumerWidget {
                   padding: EdgeInsets.symmetric(vertical: 60),
                   child: Center(child: CircularProgressIndicator()),
                 ),
-                error: (err, _) => Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 40),
-                    child: Text('Gagal memuat statistik: $err'),
+                error: (err, _) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 40),
+                  child: ErrorState(
+                    title: 'Gagal Memuat Statistik',
+                    message: 'Tidak dapat menampilkan data statistik keuangan. Silakan coba lagi.',
+                    onRetry: () => ref.invalidate(statisticsDataProvider),
                   ),
                 ),
               ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // Filter Jenis Catatan (Semua / Harian / Saldo / Tabungan / Pencapaian)
+  Widget _buildLedgerFilter(
+    BuildContext context,
+    WidgetRef ref,
+    StatsFilter filter,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final options = [
+      {'id': 'all', 'label': 'Semua', 'icon': Icons.all_inclusive_rounded},
+      {'id': 'daily', 'label': 'Harian', 'icon': Icons.today_rounded},
+      {
+        'id': 'balance',
+        'label': 'Saldo',
+        'icon': Icons.account_balance_rounded
+      },
+      {'id': 'saving', 'label': 'Tabungan', 'icon': Icons.savings_rounded},
+      {
+        'id': 'goal',
+        'label': 'Pencapaian',
+        'icon': Icons.emoji_events_rounded
+      },
+    ];
+
+    return SizedBox(
+      height: 38,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: options.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final opt = options[index];
+          final isSelected = filter.ledger == opt['id'];
+          return FilterChip(
+            selected: isSelected,
+            avatar: Icon(
+              opt['icon'] as IconData,
+              size: 16,
+              color: isSelected
+                  ? AppColors.darkAccent
+                  : (isDark
+                      ? AppColors.darkTextSecondary
+                      : AppColors.lightTextSecondary),
+            ),
+            label: Text(
+              opt['label'] as String,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                color: isSelected
+                    ? AppColors.darkAccent
+                    : (isDark ? Colors.white : AppColors.darkAccent),
+              ),
+            ),
+            selectedColor: AppColors.primary,
+            checkmarkColor: AppColors.darkAccent,
+            onSelected: (val) {
+              if (val) {
+                final ledgerId = opt['id'] as String;
+                ref.read(statsFilterProvider.notifier).state =
+                    filter.copyWith(ledger: ledgerId);
+                ref
+                    .read(activeDuitProvider.notifier)
+                    .select(DuitSelection.fromLedger(ledgerId));
+              }
+            },
+          );
+        },
       ),
     );
   }
@@ -406,6 +505,9 @@ class StatisticsScreen extends ConsumerWidget {
   Widget _buildComparisonBarChartSection(BuildContext context, StatisticsData data) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final points = data.comparisonPoints;
+    if (points.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     // Cari nilai maksimum untuk scaling
     int maxVal = 0;

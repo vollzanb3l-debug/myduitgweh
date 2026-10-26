@@ -33,5 +33,13 @@ class AppColors {
 
   // Status Dompet & Netral
   static const Color info = Color(0xFF2F80ED);
+  static const Color secondary = Color(0xFF2F80ED);
   static const Color warning = Color(0xFFF2994A);
+
+  // Warna Aksen Per Duit (Tahap 12)
+  static const Color duitHarian = Color(0xFFF9A826); // Kuning-oranye #F9A826
+  static const Color duitSaldo = Color(0xFF3B82F6); // Biru #3B82F6
+  static const Color duitTabungan = Color(0xFF22C55E); // Hijau #22C55E
+  static const Color duitPencapaian = Color(0xFF8B5CF6); // Ungu #8B5CF6
+  static const Color duitSemua = Color(0xFFF9A826); // Kuning-oranye
 }

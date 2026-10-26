@@ -6,6 +6,8 @@ class TransactionItem {
   final int walletId;
   final DateTime date;
   final String? note;
+  final String ledger; // 'daily', 'balance', 'saving', 'goal'
+  final int? goalId; // opsional: id target impian jika terkait pencapaian
   final DateTime createdAt;
 
   const TransactionItem({
@@ -16,6 +18,8 @@ class TransactionItem {
     required this.walletId,
     required this.date,
     this.note,
+    this.ledger = 'daily',
+    this.goalId,
     required this.createdAt,
   });
 
@@ -27,6 +31,8 @@ class TransactionItem {
     int? walletId,
     DateTime? date,
     String? note,
+    String? ledger,
+    int? goalId,
     DateTime? createdAt,
   }) {
     return TransactionItem(
@@ -37,6 +43,8 @@ class TransactionItem {
       walletId: walletId ?? this.walletId,
       date: date ?? this.date,
       note: note ?? this.note,
+      ledger: ledger ?? this.ledger,
+      goalId: goalId ?? this.goalId,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -50,6 +58,8 @@ class TransactionItem {
       'wallet_id': walletId,
       'date': date.toIso8601String(),
       'note': note,
+      'ledger': ledger,
+      if (goalId != null) 'goal_id': goalId,
       'created_at': createdAt.toIso8601String(),
     };
   }
@@ -63,6 +73,8 @@ class TransactionItem {
       walletId: map['wallet_id'] as int,
       date: DateTime.parse(map['date'] as String),
       note: map['note'] as String?,
+      ledger: (map['ledger'] as String?) ?? 'daily',
+      goalId: map['goal_id'] as int?,
       createdAt: DateTime.parse(map['created_at'] as String),
     );
   }
@@ -78,7 +90,9 @@ class TransactionItem {
           categoryId == other.categoryId &&
           walletId == other.walletId &&
           date == other.date &&
-          note == other.note;
+          note == other.note &&
+          ledger == other.ledger &&
+          goalId == other.goalId;
 
   @override
   int get hashCode =>
@@ -88,5 +102,7 @@ class TransactionItem {
       categoryId.hashCode ^
       walletId.hashCode ^
       date.hashCode ^
-      note.hashCode;
+      note.hashCode ^
+      ledger.hashCode ^
+      goalId.hashCode;
 }

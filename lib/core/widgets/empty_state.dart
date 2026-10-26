@@ -8,6 +8,8 @@ class EmptyState extends StatelessWidget {
   final String? message;
   final IconData icon;
   final Widget? action;
+  final String? buttonText;
+  final VoidCallback? onButtonPressed;
 
   const EmptyState({
     super.key,
@@ -15,6 +17,8 @@ class EmptyState extends StatelessWidget {
     this.message,
     this.icon = Icons.inbox_outlined,
     this.action,
+    this.buttonText,
+    this.onButtonPressed,
   });
 
   @override
@@ -65,7 +69,32 @@ class EmptyState extends StatelessWidget {
                 ),
               ),
             ],
-            if (action != null) ...[const SizedBox(height: 24), action!],
+            if (action != null) ...[
+              const SizedBox(height: 24),
+              action!,
+            ] else if (buttonText != null && onButtonPressed != null) ...[
+              const SizedBox(height: 24),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.darkAccent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 12,
+                  ),
+                ),
+                onPressed: onButtonPressed,
+                child: Text(
+                  buttonText!,
+                  style: GoogleFonts.plusJakartaSans(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

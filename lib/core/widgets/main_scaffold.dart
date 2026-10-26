@@ -40,12 +40,15 @@ class MainScaffold extends StatelessWidget {
     final selectedIndex = _calculateSelectedIndex(context);
     final navBgColor = isDark ? AppColors.darkCard : AppColors.lightCard;
 
+    final primaryColor = Theme.of(context).primaryColor;
+    final onPrimaryColor = Theme.of(context).colorScheme.onPrimary;
+
     return Scaffold(
       body: child,
       floatingActionButton: FloatingActionButton(
         onPressed: () => context.push('/tambah-transaksi'),
-        backgroundColor: AppColors.primary,
-        foregroundColor: AppColors.darkAccent,
+        backgroundColor: primaryColor,
+        foregroundColor: onPrimaryColor,
         elevation: 4,
         shape: const CircleBorder(),
         child: const Icon(Icons.add_rounded, size: 30),
@@ -88,7 +91,7 @@ class MainScaffold extends StatelessWidget {
               index: 3,
               selectedIndex: selectedIndex,
               icon: Icons.account_balance_wallet_rounded,
-              label: 'Dompet',
+              label: 'Duit',
             ),
           ],
         ),
@@ -106,7 +109,7 @@ class MainScaffold extends StatelessWidget {
     final isSelected = index == selectedIndex;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final selectedColor = isDark ? AppColors.primary : AppColors.darkAccent;
+    final selectedColor = Theme.of(context).primaryColor;
     final unselectedColor = isDark
         ? AppColors.darkTextSecondary
         : AppColors.lightTextSecondary;

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/providers/app_state_provider.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../core/utils/icon_helper.dart';
 import '../../../core/widgets/widgets.dart';
@@ -124,8 +125,16 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       }
     });
 
+    final activeDuit = ref.watch(activeDuitProvider);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Riwayat Transaksi')),
+      appBar: AppBar(
+        title: Text(
+          activeDuit.isSemua
+              ? 'Riwayat Semua Duit'
+              : 'Riwayat ${activeDuit.label}',
+        ),
+      ),
       body: Column(
         children: [
           // 1. Filter Harian / Mingguan / Bulanan
@@ -156,22 +165,29 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
           Expanded(
             child: transactionsAsync.when(
               data: (allTransactions) {
-                // Filter transaksi sesuai rentang yang dipilih
-                final filteredList = allTransactions
-                    .where((t) => _isWithinFilter(t.date, _filter))
-                    .toList();
+                // Filter transaksi sesuai rentang yang dipilih dan duit aktif
+                final filteredList = allTransactions.where((t) {
+                  if (!activeDuit.isSemua && t.ledger != activeDuit.ledgerKey) {
+                    return false;
+                  }
+                  return _isWithinFilter(t.date, _filter);
+                }).toList();
 
                 if (filteredList.isEmpty) {
                   return EmptyState(
-                    title: 'Belum Ada Transaksi',
+                    title:
+                        'Belum Ada Transaksi ${activeDuit.isSemua ? '' : activeDuit.label}',
                     message: _filter == HistoryFilter.daily
-                        ? 'Belum ada catatan transaksi untuk hari ini.'
-                        : 'Mulai catat transaksi harianmu agar keuanganmu terpantau rapi.',
+                        ? 'Belum ada transaksi ${activeDuit.isSemua ? '' : 'untuk ${activeDuit.label} '}hari ini.'
+                        : 'Mulai catat transaksi ${activeDuit.isSemua ? '' : 'untuk ${activeDuit.label} '}agar keuangan terpantau rapi.',
                     icon: Icons.receipt_long_outlined,
                     action: PrimaryButton(
                       text: 'Tambah Transaksi',
                       width: 220,
-                      onPressed: () => context.push('/tambah-transaksi'),
+                      onPressed: () => context.push(
+                        '/tambah-transaksi',
+                        extra: activeDuit.ledgerKey,
+                      ),
                     ),
                   );
                 }
@@ -411,8 +427,11 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) =>
-                  Center(child: Text('Terjadi kesalahan memuat riwayat: $err')),
+              error: (err, _) => ErrorState(
+                title: 'Gagal Memuat Riwayat',
+                message: 'Terjadi kendala saat mengambil riwayat transaksi. Silakan coba lagi.',
+                onRetry: () => ref.invalidate(transactionsStreamProvider),
+              ),
             ),
           ),
         ],

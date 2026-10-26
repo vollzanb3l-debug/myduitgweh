@@ -1,19 +1,20 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/providers/app_state_provider.dart';
 
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends ConsumerState<SplashScreen> {
   Timer? _timer;
 
   @override
@@ -21,9 +22,23 @@ class _SplashScreenState extends State<SplashScreen> {
     super.initState();
     _timer = Timer(const Duration(milliseconds: 1500), () {
       if (mounted) {
-        context.go('/beranda');
+        _navigate();
       }
     });
+  }
+
+  void _navigate() {
+    final prefs = ref.read(preferencesServiceProvider);
+    final hasSeenOnboarding = prefs.hasSeenOnboarding;
+    final isPinEnabled = prefs.isPinEnabled;
+
+    if (!hasSeenOnboarding) {
+      context.go('/panduan');
+    } else if (isPinEnabled) {
+      context.go('/kunci-pin');
+    } else {
+      context.go('/beranda');
+    }
   }
 
   @override
@@ -47,7 +62,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 borderRadius: BorderRadius.circular(28),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
+                    color: Colors.black.withValues(alpha: 0.15),
                     blurRadius: 16,
                     offset: const Offset(0, 8),
                   ),
@@ -75,7 +90,7 @@ class _SplashScreenState extends State<SplashScreen> {
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: AppColors.darkAccent.withOpacity(0.8),
+                color: AppColors.darkAccent.withValues(alpha: 0.8),
               ),
             ),
           ],

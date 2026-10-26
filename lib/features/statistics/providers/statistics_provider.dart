@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/providers/app_state_provider.dart';
 import '../../../data/models/category_model.dart';
 import '../../../data/repositories/providers.dart';
 
@@ -7,19 +8,23 @@ enum StatsPeriod { weekly, monthly, yearly }
 class StatsFilter {
   final StatsPeriod period;
   final int offset;
+  final String ledger; // 'all', 'daily', 'balance', 'saving', 'goal'
 
   const StatsFilter({
     this.period = StatsPeriod.monthly,
     this.offset = 0,
+    this.ledger = 'all',
   });
 
   StatsFilter copyWith({
     StatsPeriod? period,
     int? offset,
+    String? ledger,
   }) {
     return StatsFilter(
       period: period ?? this.period,
       offset: offset ?? this.offset,
+      ledger: ledger ?? this.ledger,
     );
   }
 
@@ -29,10 +34,11 @@ class StatsFilter {
       other is StatsFilter &&
           runtimeType == other.runtimeType &&
           period == other.period &&
-          offset == other.offset;
+          offset == other.offset &&
+          ledger == other.ledger;
 
   @override
-  int get hashCode => period.hashCode ^ offset.hashCode;
+  int get hashCode => period.hashCode ^ offset.hashCode ^ ledger.hashCode;
 }
 
 class CategoryExpenseSummary {
@@ -84,7 +90,12 @@ class StatisticsData {
 }
 
 final statsFilterProvider = StateProvider<StatsFilter>((ref) {
-  return const StatsFilter(period: StatsPeriod.monthly, offset: 0);
+  final activeDuit = ref.watch(activeDuitProvider);
+  return StatsFilter(
+    period: StatsPeriod.monthly,
+    offset: 0,
+    ledger: activeDuit.ledgerKey ?? 'all',
+  );
 });
 
 final statisticsDataProvider = FutureProvider<StatisticsData>((ref) async {
@@ -148,13 +159,28 @@ final statisticsDataProvider = FutureProvider<StatisticsData>((ref) async {
       break;
   }
 
+  final targetLedger = filter.ledger == 'all' ? null : filter.ledger;
+
   // 1. Total Pemasukan, Pengeluaran & Selisih
-  final totalIncome = await txRepo.getTotalIncomeByDateRange(start, end);
-  final totalExpense = await txRepo.getTotalExpenseByDateRange(start, end);
+  final totalIncome = await txRepo.getTotalIncomeByDateRange(
+    start,
+    end,
+    ledger: targetLedger,
+  );
+  final totalExpense = await txRepo.getTotalExpenseByDateRange(
+    start,
+    end,
+    ledger: targetLedger,
+  );
   final netDifference = totalIncome - totalExpense;
 
   // 2. Pengeluaran per kategori
-  final categoryTotalsMap = await txRepo.getTotalByCategory(start, end, type: 'expense');
+  final categoryTotalsMap = await txRepo.getTotalByCategory(
+    start,
+    end,
+    type: 'expense',
+    ledger: targetLedger,
+  );
   final categoryMap = {for (final c in categories) c.id: c};
 
   final categoryExpenses = <CategoryExpenseSummary>[];
@@ -193,8 +219,8 @@ final statisticsDataProvider = FutureProvider<StatisticsData>((ref) async {
       final s = DateTime(dayDate.year, dayDate.month, dayDate.day);
       final e = DateTime(dayDate.year, dayDate.month, dayDate.day, 23, 59, 59);
 
-      final inc = await txRepo.getTotalIncomeByDateRange(s, e);
-      final exp = await txRepo.getTotalExpenseByDateRange(s, e);
+      final inc = await txRepo.getTotalIncomeByDateRange(s, e, ledger: targetLedger);
+      final exp = await txRepo.getTotalExpenseByDateRange(s, e, ledger: targetLedger);
 
       comparisonPoints.add(
         BarChartComparisonPoint(
@@ -217,8 +243,8 @@ final statisticsDataProvider = FutureProvider<StatisticsData>((ref) async {
       final s = DateTime(start.year, start.month, startDay);
       final e = DateTime(start.year, start.month, endDay, 23, 59, 59);
 
-      final inc = await txRepo.getTotalIncomeByDateRange(s, e);
-      final exp = await txRepo.getTotalExpenseByDateRange(s, e);
+      final inc = await txRepo.getTotalIncomeByDateRange(s, e, ledger: targetLedger);
+      final exp = await txRepo.getTotalExpenseByDateRange(s, e, ledger: targetLedger);
 
       comparisonPoints.add(
         BarChartComparisonPoint(
@@ -239,8 +265,8 @@ final statisticsDataProvider = FutureProvider<StatisticsData>((ref) async {
       final lastDay = DateTime(start.year, m + 1, 0).day;
       final e = DateTime(start.year, m, lastDay, 23, 59, 59);
 
-      final inc = await txRepo.getTotalIncomeByDateRange(s, e);
-      final exp = await txRepo.getTotalExpenseByDateRange(s, e);
+      final inc = await txRepo.getTotalIncomeByDateRange(s, e, ledger: targetLedger);
+      final exp = await txRepo.getTotalExpenseByDateRange(s, e, ledger: targetLedger);
 
       comparisonPoints.add(
         BarChartComparisonPoint(

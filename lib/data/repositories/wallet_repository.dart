@@ -10,6 +10,8 @@ abstract class WalletRepository {
   Future<WalletItem?> getWalletById(int id);
   Future<List<WalletItem>> getAllWallets();
   Stream<List<WalletItem>> watchAllWallets();
+  Future<List<WalletItem>> getWalletsByLedger(String ledger);
+  Stream<List<WalletItem>> watchWalletsByLedger(String ledger);
 }
 
 class InMemoryWalletRepository implements WalletRepository {
@@ -31,7 +33,9 @@ class InMemoryWalletRepository implements WalletRepository {
   }
 
   void _notify() {
-    _controller.add(List.unmodifiable(_wallets.values));
+    if (!_controller.isClosed) {
+      _controller.add(List.unmodifiable(_wallets.values));
+    }
   }
 
   @override
@@ -74,11 +78,21 @@ class InMemoryWalletRepository implements WalletRepository {
   }
 
   @override
-  Stream<List<WalletItem>> watchAllWallets() {
-    return _controller.stream.transform(
-      StreamTransformer.fromHandlers(
-        handleData: (data, sink) => sink.add(data),
-      ),
+  Stream<List<WalletItem>> watchAllWallets() async* {
+    yield _wallets.values.toList();
+    yield* _controller.stream;
+  }
+
+  @override
+  Future<List<WalletItem>> getWalletsByLedger(String ledger) async {
+    return _wallets.values.where((w) => w.ledger == ledger).toList();
+  }
+
+  @override
+  Stream<List<WalletItem>> watchWalletsByLedger(String ledger) async* {
+    yield await getWalletsByLedger(ledger);
+    yield* _controller.stream.map(
+      (list) => list.where((w) => w.ledger == ledger).toList(),
     );
   }
 

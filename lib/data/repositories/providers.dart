@@ -22,18 +22,27 @@ final categoryRepositoryProvider = Provider<CategoryRepository>((ref) {
   return repo;
 });
 
-final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
-  final walletRepo = ref.watch(walletRepositoryProvider);
-  final repo = InMemoryTransactionRepository(walletRepository: walletRepo);
+final savingGoalRepositoryProvider = Provider<SavingGoalRepository>((ref) {
+  final repo = InMemorySavingGoalRepository(seedInitialData: false);
   ref.onDispose(() => repo.dispose());
   return repo;
 });
 
-final savingGoalRepositoryProvider = Provider<SavingGoalRepository>((ref) {
-  final repo = InMemorySavingGoalRepository();
+final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
+  final walletRepo = ref.watch(walletRepositoryProvider);
+  final goalRepo = ref.watch(savingGoalRepositoryProvider);
+  final categoryRepo = ref.watch(categoryRepositoryProvider);
+  final repo = InMemoryTransactionRepository(
+    walletRepository: walletRepo,
+    savingGoalRepository: goalRepo,
+    categoryRepository: categoryRepo,
+  );
   ref.onDispose(() => repo.dispose());
   return repo;
 });
+
+// Filter Catatan Aktif ('all', 'daily', 'balance', 'saving', 'goal')
+final activeLedgerFilterProvider = StateProvider<String>((ref) => 'all');
 
 // Stream Providers Reaktif untuk UI
 final walletsStreamProvider = StreamProvider<List<WalletItem>>((ref) {
@@ -41,9 +50,22 @@ final walletsStreamProvider = StreamProvider<List<WalletItem>>((ref) {
   return repo.watchAllWallets();
 });
 
+final walletsByLedgerStreamProvider =
+    StreamProvider.family<List<WalletItem>, String>((ref, ledger) {
+  final repo = ref.watch(walletRepositoryProvider);
+  return repo.watchWalletsByLedger(ledger);
+});
+
 final categoriesStreamProvider = StreamProvider<List<CategoryItem>>((ref) {
   final repo = ref.watch(categoryRepositoryProvider);
   return repo.watchAllCategories();
+});
+
+final categoriesByLedgerStreamProvider = StreamProvider.family<
+    List<CategoryItem>,
+    ({String ledger, String? type})>((ref, arg) {
+  final repo = ref.watch(categoryRepositoryProvider);
+  return repo.watchCategoriesByLedger(arg.ledger, type: arg.type);
 });
 
 final expenseCategoriesStreamProvider = StreamProvider<List<CategoryItem>>((
@@ -63,6 +85,12 @@ final incomeCategoriesStreamProvider = StreamProvider<List<CategoryItem>>((
 final transactionsStreamProvider = StreamProvider<List<TransactionItem>>((ref) {
   final repo = ref.watch(transactionRepositoryProvider);
   return repo.watchAllTransactions();
+});
+
+final transactionsByLedgerStreamProvider =
+    StreamProvider.family<List<TransactionItem>, String?>((ref, ledger) {
+  final repo = ref.watch(transactionRepositoryProvider);
+  return repo.watchTransactionsByLedger(ledger);
 });
 
 final savingGoalsStreamProvider = StreamProvider<List<SavingGoalItem>>((ref) {
@@ -85,3 +113,12 @@ final walletBalanceStreamProvider = StreamProvider.family<int, int>((
   final repo = ref.watch(transactionRepositoryProvider);
   return repo.watchWalletBalance(walletId);
 });
+
+final ledgerBalanceStreamProvider = StreamProvider.family<int, String>((
+  ref,
+  ledger,
+) {
+  final repo = ref.watch(transactionRepositoryProvider);
+  return repo.watchLedgerBalance(ledger);
+});
+

@@ -1,4 +1,5 @@
 import 'dart:async';
+import '../database/initial_data.dart';
 import '../models/saving_goal_model.dart';
 
 abstract class SavingGoalRepository {
@@ -11,6 +12,9 @@ abstract class SavingGoalRepository {
 
   /// Menambah setoran tabungan ke target tertentu
   Future<bool> addSavings({required int savingGoalId, required int amount});
+
+  /// Mengembalikan jumlah terkumpul target ke Rp 0 (target tidak dihapus)
+  Future<bool> resetProgress(int savingGoalId);
 }
 
 class InMemorySavingGoalRepository implements SavingGoalRepository {
@@ -19,8 +23,22 @@ class InMemorySavingGoalRepository implements SavingGoalRepository {
       StreamController<List<SavingGoalItem>>.broadcast();
   int _nextId = 1;
 
+  InMemorySavingGoalRepository({bool seedInitialData = false}) {
+    if (seedInitialData) {
+      for (final g in InitialData.defaultSavingGoals) {
+        _savingGoals[g.id ?? _nextId] = g;
+        if ((g.id ?? 0) >= _nextId) {
+          _nextId = (g.id ?? 0) + 1;
+        }
+      }
+      _notify();
+    }
+  }
+
   void _notify() {
-    _controller.add(List.unmodifiable(_savingGoals.values));
+    if (!_controller.isClosed) {
+      _controller.add(List.unmodifiable(_savingGoals.values));
+    }
   }
 
   @override
@@ -63,8 +81,9 @@ class InMemorySavingGoalRepository implements SavingGoalRepository {
   }
 
   @override
-  Stream<List<SavingGoalItem>> watchAllSavingGoals() {
-    return _controller.stream;
+  Stream<List<SavingGoalItem>> watchAllSavingGoals() async* {
+    yield _savingGoals.values.toList();
+    yield* _controller.stream;
   }
 
   @override
@@ -75,6 +94,17 @@ class InMemorySavingGoalRepository implements SavingGoalRepository {
     final updated = goal.copyWith(
       currentAmount: goal.currentAmount + amount,
     );
+    _savingGoals[savingGoalId] = updated;
+    _notify();
+    return true;
+  }
+
+  @override
+  Future<bool> resetProgress(int savingGoalId) async {
+    final goal = _savingGoals[savingGoalId];
+    if (goal == null) return false;
+
+    final updated = goal.copyWith(currentAmount: 0);
     _savingGoals[savingGoalId] = updated;
     _notify();
     return true;

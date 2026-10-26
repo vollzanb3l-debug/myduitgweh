@@ -30,6 +30,13 @@ class $WalletsTable extends Wallets with TableInfo<$WalletsTable, Wallet> {
   late final GeneratedColumn<String> type = GeneratedColumn<String>(
       'type', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _ledgerMeta = const VerificationMeta('ledger');
+  @override
+  late final GeneratedColumn<String> ledger = GeneratedColumn<String>(
+      'ledger', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('daily'));
   static const VerificationMeta _initialBalanceMeta =
       const VerificationMeta('initialBalance');
   @override
@@ -48,7 +55,7 @@ class $WalletsTable extends Wallets with TableInfo<$WalletsTable, Wallet> {
       defaultValue: currentDateAndTime);
   @override
   List<GeneratedColumn> get $columns =>
-      [id, name, type, initialBalance, createdAt];
+      [id, name, type, ledger, initialBalance, createdAt];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -73,6 +80,10 @@ class $WalletsTable extends Wallets with TableInfo<$WalletsTable, Wallet> {
           _typeMeta, type.isAcceptableOrUnknown(data['type']!, _typeMeta));
     } else if (isInserting) {
       context.missing(_typeMeta);
+    }
+    if (data.containsKey('ledger')) {
+      context.handle(_ledgerMeta,
+          ledger.isAcceptableOrUnknown(data['ledger']!, _ledgerMeta));
     }
     if (data.containsKey('initial_balance')) {
       context.handle(
@@ -99,6 +110,8 @@ class $WalletsTable extends Wallets with TableInfo<$WalletsTable, Wallet> {
           .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
       type: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}type'])!,
+      ledger: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}ledger'])!,
       initialBalance: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}initial_balance'])!,
       createdAt: attachedDatabase.typeMapping
@@ -116,12 +129,14 @@ class Wallet extends DataClass implements Insertable<Wallet> {
   final int id;
   final String name;
   final String type;
+  final String ledger;
   final int initialBalance;
   final DateTime createdAt;
   const Wallet(
       {required this.id,
       required this.name,
       required this.type,
+      required this.ledger,
       required this.initialBalance,
       required this.createdAt});
   @override
@@ -130,6 +145,7 @@ class Wallet extends DataClass implements Insertable<Wallet> {
     map['id'] = Variable<int>(id);
     map['name'] = Variable<String>(name);
     map['type'] = Variable<String>(type);
+    map['ledger'] = Variable<String>(ledger);
     map['initial_balance'] = Variable<int>(initialBalance);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
@@ -140,6 +156,7 @@ class Wallet extends DataClass implements Insertable<Wallet> {
       id: Value(id),
       name: Value(name),
       type: Value(type),
+      ledger: Value(ledger),
       initialBalance: Value(initialBalance),
       createdAt: Value(createdAt),
     );
@@ -152,6 +169,7 @@ class Wallet extends DataClass implements Insertable<Wallet> {
       id: serializer.fromJson<int>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       type: serializer.fromJson<String>(json['type']),
+      ledger: serializer.fromJson<String>(json['ledger']),
       initialBalance: serializer.fromJson<int>(json['initialBalance']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
@@ -163,6 +181,7 @@ class Wallet extends DataClass implements Insertable<Wallet> {
       'id': serializer.toJson<int>(id),
       'name': serializer.toJson<String>(name),
       'type': serializer.toJson<String>(type),
+      'ledger': serializer.toJson<String>(ledger),
       'initialBalance': serializer.toJson<int>(initialBalance),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
@@ -172,12 +191,14 @@ class Wallet extends DataClass implements Insertable<Wallet> {
           {int? id,
           String? name,
           String? type,
+          String? ledger,
           int? initialBalance,
           DateTime? createdAt}) =>
       Wallet(
         id: id ?? this.id,
         name: name ?? this.name,
         type: type ?? this.type,
+        ledger: ledger ?? this.ledger,
         initialBalance: initialBalance ?? this.initialBalance,
         createdAt: createdAt ?? this.createdAt,
       );
@@ -186,6 +207,7 @@ class Wallet extends DataClass implements Insertable<Wallet> {
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
       type: data.type.present ? data.type.value : this.type,
+      ledger: data.ledger.present ? data.ledger.value : this.ledger,
       initialBalance: data.initialBalance.present
           ? data.initialBalance.value
           : this.initialBalance,
@@ -199,6 +221,7 @@ class Wallet extends DataClass implements Insertable<Wallet> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('type: $type, ')
+          ..write('ledger: $ledger, ')
           ..write('initialBalance: $initialBalance, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
@@ -206,7 +229,8 @@ class Wallet extends DataClass implements Insertable<Wallet> {
   }
 
   @override
-  int get hashCode => Object.hash(id, name, type, initialBalance, createdAt);
+  int get hashCode =>
+      Object.hash(id, name, type, ledger, initialBalance, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -214,6 +238,7 @@ class Wallet extends DataClass implements Insertable<Wallet> {
           other.id == this.id &&
           other.name == this.name &&
           other.type == this.type &&
+          other.ledger == this.ledger &&
           other.initialBalance == this.initialBalance &&
           other.createdAt == this.createdAt);
 }
@@ -222,12 +247,14 @@ class WalletsCompanion extends UpdateCompanion<Wallet> {
   final Value<int> id;
   final Value<String> name;
   final Value<String> type;
+  final Value<String> ledger;
   final Value<int> initialBalance;
   final Value<DateTime> createdAt;
   const WalletsCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.type = const Value.absent(),
+    this.ledger = const Value.absent(),
     this.initialBalance = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
@@ -235,6 +262,7 @@ class WalletsCompanion extends UpdateCompanion<Wallet> {
     this.id = const Value.absent(),
     required String name,
     required String type,
+    this.ledger = const Value.absent(),
     this.initialBalance = const Value.absent(),
     this.createdAt = const Value.absent(),
   })  : name = Value(name),
@@ -243,6 +271,7 @@ class WalletsCompanion extends UpdateCompanion<Wallet> {
     Expression<int>? id,
     Expression<String>? name,
     Expression<String>? type,
+    Expression<String>? ledger,
     Expression<int>? initialBalance,
     Expression<DateTime>? createdAt,
   }) {
@@ -250,6 +279,7 @@ class WalletsCompanion extends UpdateCompanion<Wallet> {
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (type != null) 'type': type,
+      if (ledger != null) 'ledger': ledger,
       if (initialBalance != null) 'initial_balance': initialBalance,
       if (createdAt != null) 'created_at': createdAt,
     });
@@ -259,12 +289,14 @@ class WalletsCompanion extends UpdateCompanion<Wallet> {
       {Value<int>? id,
       Value<String>? name,
       Value<String>? type,
+      Value<String>? ledger,
       Value<int>? initialBalance,
       Value<DateTime>? createdAt}) {
     return WalletsCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
       type: type ?? this.type,
+      ledger: ledger ?? this.ledger,
       initialBalance: initialBalance ?? this.initialBalance,
       createdAt: createdAt ?? this.createdAt,
     );
@@ -282,6 +314,9 @@ class WalletsCompanion extends UpdateCompanion<Wallet> {
     if (type.present) {
       map['type'] = Variable<String>(type.value);
     }
+    if (ledger.present) {
+      map['ledger'] = Variable<String>(ledger.value);
+    }
     if (initialBalance.present) {
       map['initial_balance'] = Variable<int>(initialBalance.value);
     }
@@ -297,6 +332,7 @@ class WalletsCompanion extends UpdateCompanion<Wallet> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('type: $type, ')
+          ..write('ledger: $ledger, ')
           ..write('initialBalance: $initialBalance, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
@@ -343,8 +379,16 @@ class $CategoriesTable extends Categories
   late final GeneratedColumn<String> type = GeneratedColumn<String>(
       'type', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _ledgerMeta = const VerificationMeta('ledger');
   @override
-  List<GeneratedColumn> get $columns => [id, name, icon, colorHex, type];
+  late final GeneratedColumn<String> ledger = GeneratedColumn<String>(
+      'ledger', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('daily'));
+  @override
+  List<GeneratedColumn> get $columns =>
+      [id, name, icon, colorHex, type, ledger];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -382,6 +426,10 @@ class $CategoriesTable extends Categories
     } else if (isInserting) {
       context.missing(_typeMeta);
     }
+    if (data.containsKey('ledger')) {
+      context.handle(_ledgerMeta,
+          ledger.isAcceptableOrUnknown(data['ledger']!, _ledgerMeta));
+    }
     return context;
   }
 
@@ -401,6 +449,8 @@ class $CategoriesTable extends Categories
           .read(DriftSqlType.string, data['${effectivePrefix}color_hex'])!,
       type: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}type'])!,
+      ledger: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}ledger'])!,
     );
   }
 
@@ -416,12 +466,14 @@ class Category extends DataClass implements Insertable<Category> {
   final String icon;
   final String colorHex;
   final String type;
+  final String ledger;
   const Category(
       {required this.id,
       required this.name,
       required this.icon,
       required this.colorHex,
-      required this.type});
+      required this.type,
+      required this.ledger});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
@@ -430,6 +482,7 @@ class Category extends DataClass implements Insertable<Category> {
     map['icon'] = Variable<String>(icon);
     map['color_hex'] = Variable<String>(colorHex);
     map['type'] = Variable<String>(type);
+    map['ledger'] = Variable<String>(ledger);
     return map;
   }
 
@@ -440,6 +493,7 @@ class Category extends DataClass implements Insertable<Category> {
       icon: Value(icon),
       colorHex: Value(colorHex),
       type: Value(type),
+      ledger: Value(ledger),
     );
   }
 
@@ -452,6 +506,7 @@ class Category extends DataClass implements Insertable<Category> {
       icon: serializer.fromJson<String>(json['icon']),
       colorHex: serializer.fromJson<String>(json['colorHex']),
       type: serializer.fromJson<String>(json['type']),
+      ledger: serializer.fromJson<String>(json['ledger']),
     );
   }
   @override
@@ -463,6 +518,7 @@ class Category extends DataClass implements Insertable<Category> {
       'icon': serializer.toJson<String>(icon),
       'colorHex': serializer.toJson<String>(colorHex),
       'type': serializer.toJson<String>(type),
+      'ledger': serializer.toJson<String>(ledger),
     };
   }
 
@@ -471,13 +527,15 @@ class Category extends DataClass implements Insertable<Category> {
           String? name,
           String? icon,
           String? colorHex,
-          String? type}) =>
+          String? type,
+          String? ledger}) =>
       Category(
         id: id ?? this.id,
         name: name ?? this.name,
         icon: icon ?? this.icon,
         colorHex: colorHex ?? this.colorHex,
         type: type ?? this.type,
+        ledger: ledger ?? this.ledger,
       );
   Category copyWithCompanion(CategoriesCompanion data) {
     return Category(
@@ -486,6 +544,7 @@ class Category extends DataClass implements Insertable<Category> {
       icon: data.icon.present ? data.icon.value : this.icon,
       colorHex: data.colorHex.present ? data.colorHex.value : this.colorHex,
       type: data.type.present ? data.type.value : this.type,
+      ledger: data.ledger.present ? data.ledger.value : this.ledger,
     );
   }
 
@@ -496,13 +555,14 @@ class Category extends DataClass implements Insertable<Category> {
           ..write('name: $name, ')
           ..write('icon: $icon, ')
           ..write('colorHex: $colorHex, ')
-          ..write('type: $type')
+          ..write('type: $type, ')
+          ..write('ledger: $ledger')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, icon, colorHex, type);
+  int get hashCode => Object.hash(id, name, icon, colorHex, type, ledger);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -511,7 +571,8 @@ class Category extends DataClass implements Insertable<Category> {
           other.name == this.name &&
           other.icon == this.icon &&
           other.colorHex == this.colorHex &&
-          other.type == this.type);
+          other.type == this.type &&
+          other.ledger == this.ledger);
 }
 
 class CategoriesCompanion extends UpdateCompanion<Category> {
@@ -520,12 +581,14 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
   final Value<String> icon;
   final Value<String> colorHex;
   final Value<String> type;
+  final Value<String> ledger;
   const CategoriesCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.icon = const Value.absent(),
     this.colorHex = const Value.absent(),
     this.type = const Value.absent(),
+    this.ledger = const Value.absent(),
   });
   CategoriesCompanion.insert({
     this.id = const Value.absent(),
@@ -533,6 +596,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     required String icon,
     required String colorHex,
     required String type,
+    this.ledger = const Value.absent(),
   })  : name = Value(name),
         icon = Value(icon),
         colorHex = Value(colorHex),
@@ -543,6 +607,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     Expression<String>? icon,
     Expression<String>? colorHex,
     Expression<String>? type,
+    Expression<String>? ledger,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -550,6 +615,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
       if (icon != null) 'icon': icon,
       if (colorHex != null) 'color_hex': colorHex,
       if (type != null) 'type': type,
+      if (ledger != null) 'ledger': ledger,
     });
   }
 
@@ -558,13 +624,15 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
       Value<String>? name,
       Value<String>? icon,
       Value<String>? colorHex,
-      Value<String>? type}) {
+      Value<String>? type,
+      Value<String>? ledger}) {
     return CategoriesCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
       icon: icon ?? this.icon,
       colorHex: colorHex ?? this.colorHex,
       type: type ?? this.type,
+      ledger: ledger ?? this.ledger,
     );
   }
 
@@ -586,6 +654,9 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     if (type.present) {
       map['type'] = Variable<String>(type.value);
     }
+    if (ledger.present) {
+      map['ledger'] = Variable<String>(ledger.value);
+    }
     return map;
   }
 
@@ -596,7 +667,8 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
           ..write('name: $name, ')
           ..write('icon: $icon, ')
           ..write('colorHex: $colorHex, ')
-          ..write('type: $type')
+          ..write('type: $type, ')
+          ..write('ledger: $ledger')
           ..write(')'))
         .toString();
   }
@@ -655,6 +727,18 @@ class $TransactionsTable extends Transactions
   late final GeneratedColumn<String> note = GeneratedColumn<String>(
       'note', aliasedName, true,
       type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _ledgerMeta = const VerificationMeta('ledger');
+  @override
+  late final GeneratedColumn<String> ledger = GeneratedColumn<String>(
+      'ledger', aliasedName, false,
+      type: DriftSqlType.string,
+      requiredDuringInsert: false,
+      defaultValue: const Constant('daily'));
+  static const VerificationMeta _goalIdMeta = const VerificationMeta('goalId');
+  @override
+  late final GeneratedColumn<int> goalId = GeneratedColumn<int>(
+      'goal_id', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
@@ -664,8 +748,18 @@ class $TransactionsTable extends Transactions
       requiredDuringInsert: false,
       defaultValue: currentDateAndTime);
   @override
-  List<GeneratedColumn> get $columns =>
-      [id, type, amount, categoryId, walletId, date, note, createdAt];
+  List<GeneratedColumn> get $columns => [
+        id,
+        type,
+        amount,
+        categoryId,
+        walletId,
+        date,
+        note,
+        ledger,
+        goalId,
+        createdAt
+      ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -715,6 +809,14 @@ class $TransactionsTable extends Transactions
       context.handle(
           _noteMeta, note.isAcceptableOrUnknown(data['note']!, _noteMeta));
     }
+    if (data.containsKey('ledger')) {
+      context.handle(_ledgerMeta,
+          ledger.isAcceptableOrUnknown(data['ledger']!, _ledgerMeta));
+    }
+    if (data.containsKey('goal_id')) {
+      context.handle(_goalIdMeta,
+          goalId.isAcceptableOrUnknown(data['goal_id']!, _goalIdMeta));
+    }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
           createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
@@ -742,6 +844,10 @@ class $TransactionsTable extends Transactions
           .read(DriftSqlType.dateTime, data['${effectivePrefix}date'])!,
       note: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}note']),
+      ledger: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}ledger'])!,
+      goalId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}goal_id']),
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
     );
@@ -761,6 +867,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   final int walletId;
   final DateTime date;
   final String? note;
+  final String ledger;
+  final int? goalId;
   final DateTime createdAt;
   const Transaction(
       {required this.id,
@@ -770,6 +878,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       required this.walletId,
       required this.date,
       this.note,
+      required this.ledger,
+      this.goalId,
       required this.createdAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -782,6 +892,10 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     map['date'] = Variable<DateTime>(date);
     if (!nullToAbsent || note != null) {
       map['note'] = Variable<String>(note);
+    }
+    map['ledger'] = Variable<String>(ledger);
+    if (!nullToAbsent || goalId != null) {
+      map['goal_id'] = Variable<int>(goalId);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
@@ -796,6 +910,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       walletId: Value(walletId),
       date: Value(date),
       note: note == null && nullToAbsent ? const Value.absent() : Value(note),
+      ledger: Value(ledger),
+      goalId:
+          goalId == null && nullToAbsent ? const Value.absent() : Value(goalId),
       createdAt: Value(createdAt),
     );
   }
@@ -811,6 +928,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       walletId: serializer.fromJson<int>(json['walletId']),
       date: serializer.fromJson<DateTime>(json['date']),
       note: serializer.fromJson<String?>(json['note']),
+      ledger: serializer.fromJson<String>(json['ledger']),
+      goalId: serializer.fromJson<int?>(json['goalId']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -825,6 +944,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'walletId': serializer.toJson<int>(walletId),
       'date': serializer.toJson<DateTime>(date),
       'note': serializer.toJson<String?>(note),
+      'ledger': serializer.toJson<String>(ledger),
+      'goalId': serializer.toJson<int?>(goalId),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -837,6 +958,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           int? walletId,
           DateTime? date,
           Value<String?> note = const Value.absent(),
+          String? ledger,
+          Value<int?> goalId = const Value.absent(),
           DateTime? createdAt}) =>
       Transaction(
         id: id ?? this.id,
@@ -846,6 +969,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
         walletId: walletId ?? this.walletId,
         date: date ?? this.date,
         note: note.present ? note.value : this.note,
+        ledger: ledger ?? this.ledger,
+        goalId: goalId.present ? goalId.value : this.goalId,
         createdAt: createdAt ?? this.createdAt,
       );
   Transaction copyWithCompanion(TransactionsCompanion data) {
@@ -858,6 +983,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       walletId: data.walletId.present ? data.walletId.value : this.walletId,
       date: data.date.present ? data.date.value : this.date,
       note: data.note.present ? data.note.value : this.note,
+      ledger: data.ledger.present ? data.ledger.value : this.ledger,
+      goalId: data.goalId.present ? data.goalId.value : this.goalId,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -872,14 +999,16 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('walletId: $walletId, ')
           ..write('date: $date, ')
           ..write('note: $note, ')
+          ..write('ledger: $ledger, ')
+          ..write('goalId: $goalId, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(
-      id, type, amount, categoryId, walletId, date, note, createdAt);
+  int get hashCode => Object.hash(id, type, amount, categoryId, walletId, date,
+      note, ledger, goalId, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -891,6 +1020,8 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.walletId == this.walletId &&
           other.date == this.date &&
           other.note == this.note &&
+          other.ledger == this.ledger &&
+          other.goalId == this.goalId &&
           other.createdAt == this.createdAt);
 }
 
@@ -902,6 +1033,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<int> walletId;
   final Value<DateTime> date;
   final Value<String?> note;
+  final Value<String> ledger;
+  final Value<int?> goalId;
   final Value<DateTime> createdAt;
   const TransactionsCompanion({
     this.id = const Value.absent(),
@@ -911,6 +1044,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.walletId = const Value.absent(),
     this.date = const Value.absent(),
     this.note = const Value.absent(),
+    this.ledger = const Value.absent(),
+    this.goalId = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   TransactionsCompanion.insert({
@@ -921,6 +1056,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     required int walletId,
     required DateTime date,
     this.note = const Value.absent(),
+    this.ledger = const Value.absent(),
+    this.goalId = const Value.absent(),
     this.createdAt = const Value.absent(),
   })  : type = Value(type),
         amount = Value(amount),
@@ -935,6 +1072,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<int>? walletId,
     Expression<DateTime>? date,
     Expression<String>? note,
+    Expression<String>? ledger,
+    Expression<int>? goalId,
     Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
@@ -945,6 +1084,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (walletId != null) 'wallet_id': walletId,
       if (date != null) 'date': date,
       if (note != null) 'note': note,
+      if (ledger != null) 'ledger': ledger,
+      if (goalId != null) 'goal_id': goalId,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
@@ -957,6 +1098,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       Value<int>? walletId,
       Value<DateTime>? date,
       Value<String?>? note,
+      Value<String>? ledger,
+      Value<int?>? goalId,
       Value<DateTime>? createdAt}) {
     return TransactionsCompanion(
       id: id ?? this.id,
@@ -966,6 +1109,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       walletId: walletId ?? this.walletId,
       date: date ?? this.date,
       note: note ?? this.note,
+      ledger: ledger ?? this.ledger,
+      goalId: goalId ?? this.goalId,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -994,6 +1139,12 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     if (note.present) {
       map['note'] = Variable<String>(note.value);
     }
+    if (ledger.present) {
+      map['ledger'] = Variable<String>(ledger.value);
+    }
+    if (goalId.present) {
+      map['goal_id'] = Variable<int>(goalId.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1010,6 +1161,8 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('walletId: $walletId, ')
           ..write('date: $date, ')
           ..write('note: $note, ')
+          ..write('ledger: $ledger, ')
+          ..write('goalId: $goalId, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -1051,6 +1204,11 @@ class $SavingGoalsTable extends SavingGoals
   late final GeneratedColumn<DateTime> deadline = GeneratedColumn<DateTime>(
       'deadline', aliasedName, true,
       type: DriftSqlType.dateTime, requiredDuringInsert: false);
+  static const VerificationMeta _iconMeta = const VerificationMeta('icon');
+  @override
+  late final GeneratedColumn<String> icon = GeneratedColumn<String>(
+      'icon', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _walletIdMeta =
       const VerificationMeta('walletId');
   @override
@@ -1062,7 +1220,7 @@ class $SavingGoalsTable extends SavingGoals
           GeneratedColumn.constraintIsAlways('REFERENCES wallets (id)'));
   @override
   List<GeneratedColumn> get $columns =>
-      [id, name, targetAmount, deadline, walletId];
+      [id, name, targetAmount, deadline, icon, walletId];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1094,6 +1252,10 @@ class $SavingGoalsTable extends SavingGoals
       context.handle(_deadlineMeta,
           deadline.isAcceptableOrUnknown(data['deadline']!, _deadlineMeta));
     }
+    if (data.containsKey('icon')) {
+      context.handle(
+          _iconMeta, icon.isAcceptableOrUnknown(data['icon']!, _iconMeta));
+    }
     if (data.containsKey('wallet_id')) {
       context.handle(_walletIdMeta,
           walletId.isAcceptableOrUnknown(data['wallet_id']!, _walletIdMeta));
@@ -1117,6 +1279,8 @@ class $SavingGoalsTable extends SavingGoals
           .read(DriftSqlType.int, data['${effectivePrefix}target_amount'])!,
       deadline: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}deadline']),
+      icon: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}icon']),
       walletId: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}wallet_id'])!,
     );
@@ -1133,12 +1297,14 @@ class SavingGoal extends DataClass implements Insertable<SavingGoal> {
   final String name;
   final int targetAmount;
   final DateTime? deadline;
+  final String? icon;
   final int walletId;
   const SavingGoal(
       {required this.id,
       required this.name,
       required this.targetAmount,
       this.deadline,
+      this.icon,
       required this.walletId});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -1148,6 +1314,9 @@ class SavingGoal extends DataClass implements Insertable<SavingGoal> {
     map['target_amount'] = Variable<int>(targetAmount);
     if (!nullToAbsent || deadline != null) {
       map['deadline'] = Variable<DateTime>(deadline);
+    }
+    if (!nullToAbsent || icon != null) {
+      map['icon'] = Variable<String>(icon);
     }
     map['wallet_id'] = Variable<int>(walletId);
     return map;
@@ -1161,6 +1330,7 @@ class SavingGoal extends DataClass implements Insertable<SavingGoal> {
       deadline: deadline == null && nullToAbsent
           ? const Value.absent()
           : Value(deadline),
+      icon: icon == null && nullToAbsent ? const Value.absent() : Value(icon),
       walletId: Value(walletId),
     );
   }
@@ -1173,6 +1343,7 @@ class SavingGoal extends DataClass implements Insertable<SavingGoal> {
       name: serializer.fromJson<String>(json['name']),
       targetAmount: serializer.fromJson<int>(json['targetAmount']),
       deadline: serializer.fromJson<DateTime?>(json['deadline']),
+      icon: serializer.fromJson<String?>(json['icon']),
       walletId: serializer.fromJson<int>(json['walletId']),
     );
   }
@@ -1184,6 +1355,7 @@ class SavingGoal extends DataClass implements Insertable<SavingGoal> {
       'name': serializer.toJson<String>(name),
       'targetAmount': serializer.toJson<int>(targetAmount),
       'deadline': serializer.toJson<DateTime?>(deadline),
+      'icon': serializer.toJson<String?>(icon),
       'walletId': serializer.toJson<int>(walletId),
     };
   }
@@ -1193,12 +1365,14 @@ class SavingGoal extends DataClass implements Insertable<SavingGoal> {
           String? name,
           int? targetAmount,
           Value<DateTime?> deadline = const Value.absent(),
+          Value<String?> icon = const Value.absent(),
           int? walletId}) =>
       SavingGoal(
         id: id ?? this.id,
         name: name ?? this.name,
         targetAmount: targetAmount ?? this.targetAmount,
         deadline: deadline.present ? deadline.value : this.deadline,
+        icon: icon.present ? icon.value : this.icon,
         walletId: walletId ?? this.walletId,
       );
   SavingGoal copyWithCompanion(SavingGoalsCompanion data) {
@@ -1209,6 +1383,7 @@ class SavingGoal extends DataClass implements Insertable<SavingGoal> {
           ? data.targetAmount.value
           : this.targetAmount,
       deadline: data.deadline.present ? data.deadline.value : this.deadline,
+      icon: data.icon.present ? data.icon.value : this.icon,
       walletId: data.walletId.present ? data.walletId.value : this.walletId,
     );
   }
@@ -1220,13 +1395,15 @@ class SavingGoal extends DataClass implements Insertable<SavingGoal> {
           ..write('name: $name, ')
           ..write('targetAmount: $targetAmount, ')
           ..write('deadline: $deadline, ')
+          ..write('icon: $icon, ')
           ..write('walletId: $walletId')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, targetAmount, deadline, walletId);
+  int get hashCode =>
+      Object.hash(id, name, targetAmount, deadline, icon, walletId);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1235,6 +1412,7 @@ class SavingGoal extends DataClass implements Insertable<SavingGoal> {
           other.name == this.name &&
           other.targetAmount == this.targetAmount &&
           other.deadline == this.deadline &&
+          other.icon == this.icon &&
           other.walletId == this.walletId);
 }
 
@@ -1243,12 +1421,14 @@ class SavingGoalsCompanion extends UpdateCompanion<SavingGoal> {
   final Value<String> name;
   final Value<int> targetAmount;
   final Value<DateTime?> deadline;
+  final Value<String?> icon;
   final Value<int> walletId;
   const SavingGoalsCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.targetAmount = const Value.absent(),
     this.deadline = const Value.absent(),
+    this.icon = const Value.absent(),
     this.walletId = const Value.absent(),
   });
   SavingGoalsCompanion.insert({
@@ -1256,6 +1436,7 @@ class SavingGoalsCompanion extends UpdateCompanion<SavingGoal> {
     required String name,
     required int targetAmount,
     this.deadline = const Value.absent(),
+    this.icon = const Value.absent(),
     required int walletId,
   })  : name = Value(name),
         targetAmount = Value(targetAmount),
@@ -1265,6 +1446,7 @@ class SavingGoalsCompanion extends UpdateCompanion<SavingGoal> {
     Expression<String>? name,
     Expression<int>? targetAmount,
     Expression<DateTime>? deadline,
+    Expression<String>? icon,
     Expression<int>? walletId,
   }) {
     return RawValuesInsertable({
@@ -1272,6 +1454,7 @@ class SavingGoalsCompanion extends UpdateCompanion<SavingGoal> {
       if (name != null) 'name': name,
       if (targetAmount != null) 'target_amount': targetAmount,
       if (deadline != null) 'deadline': deadline,
+      if (icon != null) 'icon': icon,
       if (walletId != null) 'wallet_id': walletId,
     });
   }
@@ -1281,12 +1464,14 @@ class SavingGoalsCompanion extends UpdateCompanion<SavingGoal> {
       Value<String>? name,
       Value<int>? targetAmount,
       Value<DateTime?>? deadline,
+      Value<String?>? icon,
       Value<int>? walletId}) {
     return SavingGoalsCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
       targetAmount: targetAmount ?? this.targetAmount,
       deadline: deadline ?? this.deadline,
+      icon: icon ?? this.icon,
       walletId: walletId ?? this.walletId,
     );
   }
@@ -1306,6 +1491,9 @@ class SavingGoalsCompanion extends UpdateCompanion<SavingGoal> {
     if (deadline.present) {
       map['deadline'] = Variable<DateTime>(deadline.value);
     }
+    if (icon.present) {
+      map['icon'] = Variable<String>(icon.value);
+    }
     if (walletId.present) {
       map['wallet_id'] = Variable<int>(walletId.value);
     }
@@ -1319,6 +1507,7 @@ class SavingGoalsCompanion extends UpdateCompanion<SavingGoal> {
           ..write('name: $name, ')
           ..write('targetAmount: $targetAmount, ')
           ..write('deadline: $deadline, ')
+          ..write('icon: $icon, ')
           ..write('walletId: $walletId')
           ..write(')'))
         .toString();
@@ -1344,6 +1533,7 @@ typedef $$WalletsTableCreateCompanionBuilder = WalletsCompanion Function({
   Value<int> id,
   required String name,
   required String type,
+  Value<String> ledger,
   Value<int> initialBalance,
   Value<DateTime> createdAt,
 });
@@ -1351,6 +1541,7 @@ typedef $$WalletsTableUpdateCompanionBuilder = WalletsCompanion Function({
   Value<int> id,
   Value<String> name,
   Value<String> type,
+  Value<String> ledger,
   Value<int> initialBalance,
   Value<DateTime> createdAt,
 });
@@ -1405,6 +1596,9 @@ class $$WalletsTableFilterComposer
 
   ColumnFilters<String> get type => $composableBuilder(
       column: $table.type, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get ledger => $composableBuilder(
+      column: $table.ledger, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<int> get initialBalance => $composableBuilder(
       column: $table.initialBalance,
@@ -1474,6 +1668,9 @@ class $$WalletsTableOrderingComposer
   ColumnOrderings<String> get type => $composableBuilder(
       column: $table.type, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get ledger => $composableBuilder(
+      column: $table.ledger, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<int> get initialBalance => $composableBuilder(
       column: $table.initialBalance,
       builder: (column) => ColumnOrderings(column));
@@ -1499,6 +1696,9 @@ class $$WalletsTableAnnotationComposer
 
   GeneratedColumn<String> get type =>
       $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<String> get ledger =>
+      $composableBuilder(column: $table.ledger, builder: (column) => column);
 
   GeneratedColumn<int> get initialBalance => $composableBuilder(
       column: $table.initialBalance, builder: (column) => column);
@@ -1575,6 +1775,7 @@ class $$WalletsTableTableManager extends RootTableManager<
             Value<int> id = const Value.absent(),
             Value<String> name = const Value.absent(),
             Value<String> type = const Value.absent(),
+            Value<String> ledger = const Value.absent(),
             Value<int> initialBalance = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
           }) =>
@@ -1582,6 +1783,7 @@ class $$WalletsTableTableManager extends RootTableManager<
             id: id,
             name: name,
             type: type,
+            ledger: ledger,
             initialBalance: initialBalance,
             createdAt: createdAt,
           ),
@@ -1589,6 +1791,7 @@ class $$WalletsTableTableManager extends RootTableManager<
             Value<int> id = const Value.absent(),
             required String name,
             required String type,
+            Value<String> ledger = const Value.absent(),
             Value<int> initialBalance = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
           }) =>
@@ -1596,6 +1799,7 @@ class $$WalletsTableTableManager extends RootTableManager<
             id: id,
             name: name,
             type: type,
+            ledger: ledger,
             initialBalance: initialBalance,
             createdAt: createdAt,
           ),
@@ -1665,6 +1869,7 @@ typedef $$CategoriesTableCreateCompanionBuilder = CategoriesCompanion Function({
   required String icon,
   required String colorHex,
   required String type,
+  Value<String> ledger,
 });
 typedef $$CategoriesTableUpdateCompanionBuilder = CategoriesCompanion Function({
   Value<int> id,
@@ -1672,6 +1877,7 @@ typedef $$CategoriesTableUpdateCompanionBuilder = CategoriesCompanion Function({
   Value<String> icon,
   Value<String> colorHex,
   Value<String> type,
+  Value<String> ledger,
 });
 
 final class $$CategoriesTableReferences
@@ -1716,6 +1922,9 @@ class $$CategoriesTableFilterComposer
 
   ColumnFilters<String> get type => $composableBuilder(
       column: $table.type, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get ledger => $composableBuilder(
+      column: $table.ledger, builder: (column) => ColumnFilters(column));
 
   Expression<bool> transactionsRefs(
       Expression<bool> Function($$TransactionsTableFilterComposer f) f) {
@@ -1762,6 +1971,9 @@ class $$CategoriesTableOrderingComposer
 
   ColumnOrderings<String> get type => $composableBuilder(
       column: $table.type, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get ledger => $composableBuilder(
+      column: $table.ledger, builder: (column) => ColumnOrderings(column));
 }
 
 class $$CategoriesTableAnnotationComposer
@@ -1787,6 +1999,9 @@ class $$CategoriesTableAnnotationComposer
 
   GeneratedColumn<String> get type =>
       $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<String> get ledger =>
+      $composableBuilder(column: $table.ledger, builder: (column) => column);
 
   Expression<T> transactionsRefs<T extends Object>(
       Expression<T> Function($$TransactionsTableAnnotationComposer a) f) {
@@ -1838,6 +2053,7 @@ class $$CategoriesTableTableManager extends RootTableManager<
             Value<String> icon = const Value.absent(),
             Value<String> colorHex = const Value.absent(),
             Value<String> type = const Value.absent(),
+            Value<String> ledger = const Value.absent(),
           }) =>
               CategoriesCompanion(
             id: id,
@@ -1845,6 +2061,7 @@ class $$CategoriesTableTableManager extends RootTableManager<
             icon: icon,
             colorHex: colorHex,
             type: type,
+            ledger: ledger,
           ),
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
@@ -1852,6 +2069,7 @@ class $$CategoriesTableTableManager extends RootTableManager<
             required String icon,
             required String colorHex,
             required String type,
+            Value<String> ledger = const Value.absent(),
           }) =>
               CategoriesCompanion.insert(
             id: id,
@@ -1859,6 +2077,7 @@ class $$CategoriesTableTableManager extends RootTableManager<
             icon: icon,
             colorHex: colorHex,
             type: type,
+            ledger: ledger,
           ),
           withReferenceMapper: (p0) => p0
               .map((e) => (
@@ -1913,6 +2132,8 @@ typedef $$TransactionsTableCreateCompanionBuilder = TransactionsCompanion
   required int walletId,
   required DateTime date,
   Value<String?> note,
+  Value<String> ledger,
+  Value<int?> goalId,
   Value<DateTime> createdAt,
 });
 typedef $$TransactionsTableUpdateCompanionBuilder = TransactionsCompanion
@@ -1924,6 +2145,8 @@ typedef $$TransactionsTableUpdateCompanionBuilder = TransactionsCompanion
   Value<int> walletId,
   Value<DateTime> date,
   Value<String?> note,
+  Value<String> ledger,
+  Value<int?> goalId,
   Value<DateTime> createdAt,
 });
 
@@ -1983,6 +2206,12 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<String> get note => $composableBuilder(
       column: $table.note, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get ledger => $composableBuilder(
+      column: $table.ledger, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get goalId => $composableBuilder(
+      column: $table.goalId, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
@@ -2052,6 +2281,12 @@ class $$TransactionsTableOrderingComposer
   ColumnOrderings<String> get note => $composableBuilder(
       column: $table.note, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get ledger => $composableBuilder(
+      column: $table.ledger, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<int> get goalId => $composableBuilder(
+      column: $table.goalId, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
 
@@ -2119,6 +2354,12 @@ class $$TransactionsTableAnnotationComposer
 
   GeneratedColumn<String> get note =>
       $composableBuilder(column: $table.note, builder: (column) => column);
+
+  GeneratedColumn<String> get ledger =>
+      $composableBuilder(column: $table.ledger, builder: (column) => column);
+
+  GeneratedColumn<int> get goalId =>
+      $composableBuilder(column: $table.goalId, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -2194,6 +2435,8 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<int> walletId = const Value.absent(),
             Value<DateTime> date = const Value.absent(),
             Value<String?> note = const Value.absent(),
+            Value<String> ledger = const Value.absent(),
+            Value<int?> goalId = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
           }) =>
               TransactionsCompanion(
@@ -2204,6 +2447,8 @@ class $$TransactionsTableTableManager extends RootTableManager<
             walletId: walletId,
             date: date,
             note: note,
+            ledger: ledger,
+            goalId: goalId,
             createdAt: createdAt,
           ),
           createCompanionCallback: ({
@@ -2214,6 +2459,8 @@ class $$TransactionsTableTableManager extends RootTableManager<
             required int walletId,
             required DateTime date,
             Value<String?> note = const Value.absent(),
+            Value<String> ledger = const Value.absent(),
+            Value<int?> goalId = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
           }) =>
               TransactionsCompanion.insert(
@@ -2224,6 +2471,8 @@ class $$TransactionsTableTableManager extends RootTableManager<
             walletId: walletId,
             date: date,
             note: note,
+            ledger: ledger,
+            goalId: goalId,
             createdAt: createdAt,
           ),
           withReferenceMapper: (p0) => p0
@@ -2298,6 +2547,7 @@ typedef $$SavingGoalsTableCreateCompanionBuilder = SavingGoalsCompanion
   required String name,
   required int targetAmount,
   Value<DateTime?> deadline,
+  Value<String?> icon,
   required int walletId,
 });
 typedef $$SavingGoalsTableUpdateCompanionBuilder = SavingGoalsCompanion
@@ -2306,6 +2556,7 @@ typedef $$SavingGoalsTableUpdateCompanionBuilder = SavingGoalsCompanion
   Value<String> name,
   Value<int> targetAmount,
   Value<DateTime?> deadline,
+  Value<String?> icon,
   Value<int> walletId,
 });
 
@@ -2348,6 +2599,9 @@ class $$SavingGoalsTableFilterComposer
 
   ColumnFilters<DateTime> get deadline => $composableBuilder(
       column: $table.deadline, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get icon => $composableBuilder(
+      column: $table.icon, builder: (column) => ColumnFilters(column));
 
   $$WalletsTableFilterComposer get walletId {
     final $$WalletsTableFilterComposer composer = $composerBuilder(
@@ -2392,6 +2646,9 @@ class $$SavingGoalsTableOrderingComposer
   ColumnOrderings<DateTime> get deadline => $composableBuilder(
       column: $table.deadline, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get icon => $composableBuilder(
+      column: $table.icon, builder: (column) => ColumnOrderings(column));
+
   $$WalletsTableOrderingComposer get walletId {
     final $$WalletsTableOrderingComposer composer = $composerBuilder(
         composer: this,
@@ -2433,6 +2690,9 @@ class $$SavingGoalsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get deadline =>
       $composableBuilder(column: $table.deadline, builder: (column) => column);
+
+  GeneratedColumn<String> get icon =>
+      $composableBuilder(column: $table.icon, builder: (column) => column);
 
   $$WalletsTableAnnotationComposer get walletId {
     final $$WalletsTableAnnotationComposer composer = $composerBuilder(
@@ -2482,6 +2742,7 @@ class $$SavingGoalsTableTableManager extends RootTableManager<
             Value<String> name = const Value.absent(),
             Value<int> targetAmount = const Value.absent(),
             Value<DateTime?> deadline = const Value.absent(),
+            Value<String?> icon = const Value.absent(),
             Value<int> walletId = const Value.absent(),
           }) =>
               SavingGoalsCompanion(
@@ -2489,6 +2750,7 @@ class $$SavingGoalsTableTableManager extends RootTableManager<
             name: name,
             targetAmount: targetAmount,
             deadline: deadline,
+            icon: icon,
             walletId: walletId,
           ),
           createCompanionCallback: ({
@@ -2496,6 +2758,7 @@ class $$SavingGoalsTableTableManager extends RootTableManager<
             required String name,
             required int targetAmount,
             Value<DateTime?> deadline = const Value.absent(),
+            Value<String?> icon = const Value.absent(),
             required int walletId,
           }) =>
               SavingGoalsCompanion.insert(
@@ -2503,6 +2766,7 @@ class $$SavingGoalsTableTableManager extends RootTableManager<
             name: name,
             targetAmount: targetAmount,
             deadline: deadline,
+            icon: icon,
             walletId: walletId,
           ),
           withReferenceMapper: (p0) => p0

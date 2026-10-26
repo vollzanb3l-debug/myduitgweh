@@ -83,3 +83,5 @@ Terinspirasi dari nuansa platform donasi kreator Indonesia yang hangat, ramah, d
 4. Setiap tahap selesai: jalankan `flutter analyze` dan perbaiki semua masalah.
 5. Di akhir tahap, tulis ringkasan singkat: file yang dibuat/diubah dan cara mencobanya.
 6. Jika ada keputusan yang meragukan, pilih opsi paling sederhana dan catat secara transparan.
+7. Gunakan istilah duit, bukan dompet atau catatan, pada teks antarmuka.
+8. Label di bawah sapaan Beranda memakai format MyDuitGweh (NamaDuit).

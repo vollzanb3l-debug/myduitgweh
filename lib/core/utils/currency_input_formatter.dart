@@ -23,9 +23,9 @@ class CurrencyInputFormatter extends TextInputFormatter {
       return const TextEditingValue(text: '');
     }
 
-    // Batasi maksimum angka agar tidak overflow integer (maks 13 digit rupiah)
-    final truncatedDigits = cleanDigits.length > 13
-        ? cleanDigits.substring(0, 13)
+    // Batasi maksimum angka agar tidak overflow integer (maksimal 15 digit)
+    final truncatedDigits = cleanDigits.length > 15
+        ? cleanDigits.substring(0, 15)
         : cleanDigits;
 
     final parsed = int.tryParse(truncatedDigits) ?? 0;
@@ -37,9 +37,11 @@ class CurrencyInputFormatter extends TextInputFormatter {
     );
   }
 
-  /// Ekstrak integer murni dari teks yang telah diformat
+  /// Ekstrak integer murni dari teks yang telah diformat (maksimal 15 digit)
   static int parseRupiah(String text) {
     final clean = text.replaceAll(RegExp(r'[^0-9]'), '');
-    return int.tryParse(clean) ?? 0;
+    if (clean.isEmpty) return 0;
+    final truncated = clean.length > 15 ? clean.substring(0, 15) : clean;
+    return int.tryParse(truncated) ?? 0;
   }
 }

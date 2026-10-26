@@ -7,7 +7,12 @@ import '../constants/app_constants.dart';
 class AppTheme {
   AppTheme._();
 
-  static ThemeData get lightTheme {
+  static ThemeData lightTheme([Color? accentColor]) {
+    final primary = accentColor ?? AppColors.primary;
+    final onPrimary = primary.computeLuminance() > 0.5
+        ? AppColors.darkAccent
+        : Colors.white;
+
     final baseTextTheme = GoogleFonts.plusJakartaSansTextTheme(
       ThemeData.light().textTheme,
     );
@@ -15,13 +20,13 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      primaryColor: AppColors.primary,
+      primaryColor: primary,
       scaffoldBackgroundColor: AppColors.lightBackground,
-      colorScheme: const ColorScheme.light(
-        primary: AppColors.primary,
-        onPrimary: AppColors.darkAccent,
-        secondary: AppColors.primaryDark,
-        onSecondary: Colors.white,
+      colorScheme: ColorScheme.light(
+        primary: primary,
+        onPrimary: onPrimary,
+        secondary: primary,
+        onSecondary: onPrimary,
         surface: AppColors.lightCard,
         onSurface: AppColors.lightTextPrimary,
         error: AppColors.expense,
@@ -54,8 +59,8 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: AppColors.darkAccent,
+          backgroundColor: primary,
+          foregroundColor: onPrimary,
           elevation: 0,
           minimumSize: const Size.fromHeight(AppConstants.buttonHeight),
           shape: const StadiumBorder(),
@@ -67,15 +72,23 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.darkAccent,
+          foregroundColor: primary,
           minimumSize: const Size.fromHeight(AppConstants.buttonHeight),
           shape: const StadiumBorder(),
-          side: const BorderSide(color: AppColors.darkAccent, width: 1.5),
+          side: BorderSide(color: primary, width: 1.5),
           textStyle: GoogleFonts.plusJakartaSans(
             fontSize: 16,
             fontWeight: FontWeight.w700,
           ),
         ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: primary,
+        foregroundColor: onPrimary,
+        elevation: 4,
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: primary,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -98,16 +111,16 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppConstants.inputBorderRadius),
-          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+          borderSide: BorderSide(color: primary, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppConstants.inputBorderRadius),
           borderSide: const BorderSide(color: AppColors.expense, width: 1),
         ),
       ),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: AppColors.lightCard,
-        selectedItemColor: AppColors.darkAccent,
+        selectedItemColor: primary,
         unselectedItemColor: AppColors.lightTextSecondary,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
@@ -115,7 +128,12 @@ class AppTheme {
     );
   }
 
-  static ThemeData get darkTheme {
+  static ThemeData darkTheme([Color? accentColor]) {
+    final primary = accentColor ?? AppColors.primary;
+    final onPrimary = primary.computeLuminance() > 0.5
+        ? AppColors.darkAccent
+        : Colors.white;
+
     final baseTextTheme = GoogleFonts.plusJakartaSansTextTheme(
       ThemeData.dark().textTheme,
     );
@@ -123,12 +141,12 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      primaryColor: AppColors.primary,
+      primaryColor: primary,
       scaffoldBackgroundColor: AppColors.darkBackground,
-      colorScheme: const ColorScheme.dark(
-        primary: AppColors.primary,
-        onPrimary: AppColors.darkAccent,
-        secondary: AppColors.primaryLight,
+      colorScheme: ColorScheme.dark(
+        primary: primary,
+        onPrimary: onPrimary,
+        secondary: primary,
         onSecondary: Colors.black,
         surface: AppColors.darkCard,
         onSurface: AppColors.darkTextPrimary,
@@ -162,8 +180,8 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: AppColors.darkAccent,
+          backgroundColor: primary,
+          foregroundColor: onPrimary,
           elevation: 0,
           minimumSize: const Size.fromHeight(AppConstants.buttonHeight),
           shape: const StadiumBorder(),
@@ -175,15 +193,23 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: AppColors.primary,
+          foregroundColor: primary,
           minimumSize: const Size.fromHeight(AppConstants.buttonHeight),
           shape: const StadiumBorder(),
-          side: const BorderSide(color: AppColors.primary, width: 1.5),
+          side: BorderSide(color: primary, width: 1.5),
           textStyle: GoogleFonts.plusJakartaSans(
             fontSize: 16,
             fontWeight: FontWeight.w700,
           ),
         ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: primary,
+        foregroundColor: onPrimary,
+        elevation: 4,
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: primary,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
@@ -206,16 +232,16 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppConstants.inputBorderRadius),
-          borderSide: const BorderSide(color: AppColors.primary, width: 2),
+          borderSide: BorderSide(color: primary, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppConstants.inputBorderRadius),
           borderSide: const BorderSide(color: AppColors.expense, width: 1),
         ),
       ),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: AppColors.darkCard,
-        selectedItemColor: AppColors.primary,
+        selectedItemColor: primary,
         unselectedItemColor: AppColors.darkTextSecondary,
         type: BottomNavigationBarType.fixed,
         elevation: 8,
