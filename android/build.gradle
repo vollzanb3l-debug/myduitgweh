@@ -13,6 +13,22 @@ subprojects {
     project.evaluationDependsOn(":app")
 }
 
+subprojects {
+    project.configurations.all {
+        resolutionStrategy {
+            force 'androidx.core:core:1.15.0'
+            force 'androidx.core:core-ktx:1.15.0'
+            eachDependency { details ->
+                if (details.requested.group == 'androidx.core') {
+                    if (details.requested.name == 'core' || details.requested.name == 'core-ktx') {
+                        details.useVersion '1.15.0'
+                    }
+                }
+            }
+        }
+    }
+}
+
 tasks.register("clean", Delete) {
     delete rootProject.buildDir
 }
