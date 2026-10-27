@@ -12,6 +12,7 @@ abstract class WalletRepository {
   Stream<List<WalletItem>> watchAllWallets();
   Future<List<WalletItem>> getWalletsByLedger(String ledger);
   Stream<List<WalletItem>> watchWalletsByLedger(String ledger);
+  void clearAll();
   void resetToInitial();
 }
 
@@ -95,6 +96,12 @@ class InMemoryWalletRepository implements WalletRepository {
     yield* _controller.stream.map(
       (list) => list.where((w) => w.ledger == ledger).toList(),
     );
+  }
+
+  @override
+  void clearAll() {
+    _wallets.clear();
+    _notify();
   }
 
   @override

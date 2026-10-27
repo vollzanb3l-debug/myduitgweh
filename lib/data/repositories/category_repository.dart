@@ -14,6 +14,7 @@ abstract class CategoryRepository {
   Stream<List<CategoryItem>> watchCategoriesByType(String type);
   Future<List<CategoryItem>> getCategoriesByLedger(String ledger, {String? type});
   Stream<List<CategoryItem>> watchCategoriesByLedger(String ledger, {String? type});
+  void clearAll();
   void resetToInitial();
 }
 
@@ -118,6 +119,12 @@ class InMemoryCategoryRepository implements CategoryRepository {
         return matchesLedger && matchesType;
       }).toList(),
     );
+  }
+
+  @override
+  void clearAll() {
+    _categories.clear();
+    _notify();
   }
 
   @override

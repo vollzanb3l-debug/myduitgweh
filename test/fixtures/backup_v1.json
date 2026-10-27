@@ -1,0 +1,77 @@
+{
+  "appName": "MyDuitGweh",
+  "backupVersion": 1,
+  "appVersion": "1.0.0",
+  "createdAt": "2026-10-27T10:00:00.000Z",
+  "preferences": {
+    "userName": "Rafi Pratama",
+    "themeMode": "system",
+    "activeDuitKey": "harian",
+    "isBalanceHidden": false,
+    "historyFilter": "daily"
+  },
+  "wallets": [
+    {
+      "id": 1,
+      "name": "Uang Harian",
+      "type": "daily",
+      "initialBalance": 100000,
+      "createdAt": "2026-10-01T08:00:00.000Z"
+    },
+    {
+      "id": 2,
+      "name": "Tunai Dompet",
+      "type": "balance",
+      "initialBalance": 250000,
+      "createdAt": "2026-10-01T08:00:00.000Z"
+    }
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "Makan & Minum",
+      "icon": "restaurant_rounded",
+      "colorHex": "#EF4444",
+      "type": "expense"
+    },
+    {
+      "id": 2,
+      "name": "Gaji Pokok",
+      "icon": "payments_rounded",
+      "colorHex": "#10B981",
+      "type": "income"
+    }
+  ],
+  "savingGoals": [
+    {
+      "id": 1,
+      "name": "Beli Sepeda",
+      "targetAmount": 3000000,
+      "currentAmount": 500000,
+      "targetDate": "2026-12-31T00:00:00.000Z",
+      "colorHex": "#F9A826",
+      "icon": "two_wheeler_rounded",
+      "isCompleted": false
+    }
+  ],
+  "transactions": [
+    {
+      "id": 1,
+      "walletId": 1,
+      "categoryId": 1,
+      "amount": 25000,
+      "type": "expense",
+      "note": "Makan siang nasi padang",
+      "date": "2026-10-25T12:30:00.000Z"
+    },
+    {
+      "id": 2,
+      "walletId": 2,
+      "categoryId": 2,
+      "amount": 1000000,
+      "type": "income",
+      "note": "Bonus kerja",
+      "date": "2026-10-26T09:00:00.000Z"
+    }
+  ]
+}

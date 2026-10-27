@@ -89,3 +89,4 @@ Terinspirasi dari nuansa platform donasi kreator Indonesia yang hangat, ramah, d
 10. Tidak memakai nama merek komersial (gunakan nama generik: Bank, E-Wallet, Tunai) dan sediakan opsi "Lainnya" di setiap pilihan.
 11. Dialog tanpa opsi tidak menampilkan dropdown (tampilkan label biasa jika hanya 1 opsi).
 12. Alur PIN memiliki 2 pertanyaan pemulihan & konfirmasi hapus data ketik "HAPUS" untuk Reset Total.
+13. ATURAN FORMAT CADANGAN (BACKUP): Setiap kali struktur data berubah (menambah, menghapus, atau mengganti kolom), `backupVersion` di `core/constants/backup_constants.dart` wajib dinaikkan (+1) dan fungsi migrasinya ditambahkan di `BackupService` agar berkas cadangan versi lama selalu aman dipulihkan. Simpan 1 contoh berkas cadangan per versi di folder `test/fixtures/` untuk uji ketahanan.

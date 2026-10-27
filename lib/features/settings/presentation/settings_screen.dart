@@ -413,16 +413,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final jsonContent = await backup.pickBackupFile();
     if (jsonContent == null) return;
 
-    final isValid = backup.validateBackup(jsonContent);
-    if (!isValid) {
+    // Pemeriksaan awal struktur & versi berkas cadangan
+    final prelimError = backup.validateBackupPrelim(jsonContent);
+    if (prelimError != null) {
       if (mounted) {
         showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: const Text('Berkas Tidak Valid'),
-            content: const Text(
-              'Berkas yang dipilih bukan berkas cadangan MyDuitGweh yang sah atau berkas mengalami kerusakan.',
+            title: const Text('Berkas Tidak Sesuai'),
+            content: Text(
+              prelimError,
+              style: GoogleFonts.plusJakartaSans(fontSize: 14),
             ),
             actions: [
               TextButton(
@@ -467,16 +469,72 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
 
     if (confirm == true && mounted) {
-      final success = await backup.restoreBackup(jsonContent);
-      if (mounted) {
+      final result = await backup.restoreBackup(jsonContent);
+      if (!mounted) return;
+
+      if (result.success) {
+        await showDialog<void>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: AppColors.income),
+                const SizedBox(width: 8),
+                Text(
+                  'Pemulihan Berhasil',
+                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Data berhasil dipulihkan dari berkas cadangan:',
+                  style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 10),
+                Text('• ${result.restoredTransactions} Transaksi'),
+                Text('• ${result.restoredWallets} Akun Dompet'),
+                Text('• ${result.restoredGoals} Target Impian'),
+                Text('• ${result.restoredCategories} Kategori'),
+                if (result.skippedCount > 0) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    'Perhatian: ${result.skippedCount} item dilewati karena tidak memenuhi validasi:',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.expense,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  ...result.skippedReasons.take(3).map(
+                    (reason) => Text(
+                      '• $reason',
+                      style: GoogleFonts.plusJakartaSans(fontSize: 11, color: AppColors.expense),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            actions: [
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Selesai'),
+              ),
+            ],
+          ),
+        );
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              success
-                  ? 'Data berhasil dipulihkan dari berkas cadangan.'
-                  : 'Gagal memulihkan berkas cadangan.',
-            ),
-            backgroundColor: success ? AppColors.income : AppColors.expense,
+            content: Text(result.message),
+            backgroundColor: AppColors.expense,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }

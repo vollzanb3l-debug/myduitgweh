@@ -1,0 +1,39 @@
+{
+  "appName": "MyDuitGweh",
+  "version": 0,
+  "createdAt": "2026-09-15T08:00:00.000Z",
+  "preferences": {
+    "userName": "Pengguna Lama",
+    "themeMode": "dark"
+  },
+  "wallets": [
+    {
+      "id": 1,
+      "name": "Dompet Tunai",
+      "type": "daily",
+      "initialBalance": 50000,
+      "createdAt": "2026-09-01T08:00:00.000Z"
+    }
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "Kebutuhan Pokok",
+      "icon": "shopping_cart_rounded",
+      "colorHex": "#3B82F6",
+      "type": "expense"
+    }
+  ],
+  "savingGoals": [],
+  "transactions": [
+    {
+      "id": 1,
+      "walletId": 1,
+      "categoryId": 1,
+      "amount": 20000,
+      "type": "expense",
+      "note": "Beli sembako",
+      "date": "2026-09-10T10:00:00.000Z"
+    }
+  ]
+}
