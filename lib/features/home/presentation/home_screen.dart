@@ -491,18 +491,37 @@ class HomeScreen extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 6),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: AnimatedRupiahCounter(
-              amount: data.totalBalance,
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 32,
-                fontWeight: FontWeight.w800,
-                color: Colors.white,
-                letterSpacing: -0.5,
+          Row(
+            children: [
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: AnimatedRupiahCounter(
+                    amount: data.totalBalance,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                ),
               ),
-            ),
+              IconButton(
+                icon: Icon(
+                  ref.watch(hideBalanceProvider)
+                      ? Icons.visibility_off_rounded
+                      : Icons.visibility_rounded,
+                  color: Colors.white.withValues(alpha: 0.9),
+                  size: 22,
+                ),
+                tooltip: ref.watch(hideBalanceProvider)
+                    ? 'Tampilkan Saldo'
+                    : 'Sembunyikan Saldo',
+                onPressed: () => ref.read(hideBalanceProvider.notifier).toggle(),
+              ),
+            ],
           ),
           const SizedBox(height: 18),
           Container(
@@ -1050,21 +1069,47 @@ class HomeScreen extends ConsumerWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Terkumpul: ${formatRupiah(g.currentAmount)}',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12,
-                          color: isDark
-                              ? AppColors.darkTextSecondary
-                              : AppColors.lightTextSecondary,
-                        ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Terkumpul: ',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              color: isDark
+                                  ? AppColors.darkTextSecondary
+                                  : AppColors.lightTextSecondary,
+                            ),
+                          ),
+                          MoneyText(
+                            amount: g.currentAmount,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              color: isDark
+                                  ? AppColors.darkTextSecondary
+                                  : AppColors.lightTextSecondary,
+                            ),
+                          ),
+                        ],
                       ),
-                      Text(
-                        'Target: ${formatRupiah(g.targetAmount)}',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Target: ',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          MoneyText(
+                            amount: g.targetAmount,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -1119,8 +1164,8 @@ class HomeScreen extends ConsumerWidget {
                     : AppColors.lightTextPrimary,
               ),
             ),
-            Text(
-              formatRupiah(totalWeekExpense),
+            MoneyText(
+              amount: totalWeekExpense,
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
@@ -1342,10 +1387,9 @@ class HomeScreen extends ConsumerWidget {
                           ],
                         ),
                       ),
-                      Text(
-                        isIncome
-                            ? '+ ${formatRupiah(item.amount)}'
-                            : '- ${formatRupiah(item.amount)}',
+                      MoneyText(
+                        amount: item.amount,
+                        prefix: isIncome ? '+ ' : '- ',
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,

@@ -79,6 +79,22 @@ class IconHelper {
       case 'home_rounded':
       case 'home':
         return Icons.home_rounded;
+      case 'two_wheeler_rounded':
+      case 'two_wheeler':
+      case 'motorcycle':
+        return Icons.two_wheeler_rounded;
+      case 'celebration_rounded':
+      case 'celebration':
+        return Icons.celebration_rounded;
+      case 'beach_access_rounded':
+      case 'beach_access':
+        return Icons.beach_access_rounded;
+      case 'favorite_rounded':
+      case 'favorite':
+        return Icons.favorite_rounded;
+      case 'star_rounded':
+      case 'star':
+        return Icons.star_rounded;
       case 'today_rounded':
         return Icons.today_rounded;
       default:

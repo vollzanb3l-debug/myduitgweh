@@ -15,6 +15,7 @@ abstract class SavingGoalRepository {
 
   /// Mengembalikan jumlah terkumpul target ke Rp 0 (target tidak dihapus)
   Future<bool> resetProgress(int savingGoalId);
+  void clearAll();
 }
 
 class InMemorySavingGoalRepository implements SavingGoalRepository {
@@ -108,6 +109,13 @@ class InMemorySavingGoalRepository implements SavingGoalRepository {
     _savingGoals[savingGoalId] = updated;
     _notify();
     return true;
+  }
+
+  @override
+  void clearAll() {
+    _savingGoals.clear();
+    _nextId = 1;
+    _notify();
   }
 
   void dispose() {

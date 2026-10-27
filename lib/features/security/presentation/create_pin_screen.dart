@@ -7,6 +7,8 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/providers/app_state_provider.dart';
 import '../../../core/widgets/numeric_keypad.dart';
 
+import 'recovery_questions_screen.dart';
+
 class CreatePinScreen extends ConsumerStatefulWidget {
   final bool isChangingPin;
 
@@ -99,7 +101,12 @@ class _CreatePinScreenState extends ConsumerState<CreatePinScreen> {
         if (widget.isChangingPin) {
           context.pop();
         } else {
-          context.go('/beranda');
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const RecoveryQuestionsScreen(isEditing: false),
+            ),
+          );
         }
       }
     } else {

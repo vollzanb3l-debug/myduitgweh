@@ -163,6 +163,13 @@ class AboutScreen extends StatelessWidget {
                     icon: Icons.mail_outline_rounded,
                     isDark: isDark,
                   ),
+                  const SizedBox(height: 10),
+                  _buildInfoRow(
+                    label: 'WhatsApp',
+                    value: AboutText.authorWhatsApp,
+                    icon: Icons.chat_bubble_outline_rounded,
+                    isDark: isDark,
+                  ),
                   const SizedBox(height: 14),
                   Text(
                     AboutText.authorBio,

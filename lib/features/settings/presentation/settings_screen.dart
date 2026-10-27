@@ -1,3 +1,6 @@
+import '../../../core/services/backup_service.dart';
+import '../../../core/services/total_reset_service.dart';
+import '../../security/presentation/recovery_questions_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,7 +10,6 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/providers/app_state_provider.dart';
 import '../../../core/widgets/numeric_keypad.dart';
 import '../../../core/widgets/widgets.dart';
-import '../../../data/repositories/providers.dart';
 import '../../security/presentation/create_pin_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -229,7 +231,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return result ?? false;
   }
 
-  // Dialog Reset Semua Data (2 Langkah)
+  // Dialog Reset Semua Data (2 Langkah dengan ketik "HAPUS")
   Future<void> _handleResetAllData() async {
     final step1 = await showDialog<bool>(
       context: context,
@@ -246,8 +248,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ],
         ),
         content: Text(
-          'Tindakan ini akan menghapus seluruh catatan keuangan, dompet kustom, target impian, dan PIN keamanan Anda.',
-          style: GoogleFonts.plusJakartaSans(fontSize: 14, height: 1.5),
+          'SEMUA DATA AKAN HILANG PERMANEN DAN TIDAK BISA DIKEMBALIKAN:\n\n'
+          '• Seluruh transaksi dan riwayat mutasi\n'
+          '• Akun saldo, tabungan, dan target impian\n'
+          '• PIN keamanan dan pertanyaan pemulihan\n\n'
+          'Aplikasi akan dikembalikan bersih seperti baru pertama kali diinstal.',
+          style: GoogleFonts.plusJakartaSans(fontSize: 13, height: 1.5),
         ),
         actions: [
           TextButton(
@@ -268,20 +274,180 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
     if (step1 != true || !mounted) return;
 
+    final confirmCtrl = TextEditingController();
     final step2 = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final isMatch = confirmCtrl.text.trim() == 'HAPUS';
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Text(
+              'Ketik "HAPUS" untuk Konfirmasi',
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.w800,
+                color: AppColors.expense,
+                fontSize: 16,
+              ),
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Untuk memastikan Anda benar-benar yakin ingin menghapus seluruh data aplikasi, ketik kata HAPUS di bawah:',
+                  style: GoogleFonts.plusJakartaSans(fontSize: 13),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: confirmCtrl,
+                  autofocus: true,
+                  textCapitalization: TextCapitalization.characters,
+                  decoration: const InputDecoration(
+                    hintText: 'Ketik HAPUS',
+                  ),
+                  onChanged: (_) => setDialogState(() {}),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.expense,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: isMatch ? () => Navigator.pop(ctx, true) : null,
+                child: const Text('HAPUS SEMUA DATA'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+
+    if (step2 == true && mounted) {
+      await TotalResetService.performTotalReset(ref);
+      if (mounted) {
+        context.go('/panduan');
+      }
+    }
+  }
+
+  // Alur Cadangkan Data (Backup)
+  Future<void> _handleBackup() async {
+    final proceed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
-          'Konfirmasi Akhir',
-          style: GoogleFonts.plusJakartaSans(
-            fontWeight: FontWeight.w800,
-            color: AppColors.expense,
-          ),
+          'Cadangkan Data',
+          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
         ),
         content: Text(
-          'Semua data akan terhapus secara permanen dari perangkat ini. Apakah Anda yakin?',
-          style: GoogleFonts.plusJakartaSans(fontSize: 14, height: 1.5),
+          'Data akan disimpan sebagai berkas .json di lokasi yang kamu pilih.',
+          style: GoogleFonts.plusJakartaSans(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Lanjut'),
+          ),
+        ],
+      ),
+    );
+
+    if (proceed != true || !mounted) return;
+
+    try {
+      final backup = BackupService.fromRef(ref);
+      await backup.exportBackupFile();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal mencadangkan data: $e')),
+        );
+      }
+    }
+  }
+
+  // Alur Pulihkan Data (Impor)
+  Future<void> _handleRestore() async {
+    final proceed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Pulihkan Data',
+          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+        ),
+        content: Text(
+          'Pilih berkas cadangan .json. Data saat ini akan ditimpa.',
+          style: GoogleFonts.plusJakartaSans(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Pilih Berkas'),
+          ),
+        ],
+      ),
+    );
+
+    if (proceed != true || !mounted) return;
+
+    final backup = BackupService.fromRef(ref);
+    final jsonContent = await backup.pickBackupFile();
+    if (jsonContent == null) return;
+
+    final isValid = backup.validateBackup(jsonContent);
+    if (!isValid) {
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Text('Berkas Tidak Valid'),
+            content: const Text(
+              'Berkas yang dipilih bukan berkas cadangan MyDuitGweh yang sah atau berkas mengalami kerusakan.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Mengerti'),
+              ),
+            ],
+          ),
+        );
+      }
+      return;
+    }
+
+    if (!mounted) return;
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Konfirmasi Timpa Data',
+          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+        ),
+        content: Text(
+          'Seluruh transaksi dan data saat ini akan digantikan dengan isi berkas cadangan. Lanjutkan pemulihan?',
+          style: GoogleFonts.plusJakartaSans(fontSize: 14),
         ),
         actions: [
           TextButton(
@@ -294,30 +460,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               foregroundColor: Colors.white,
             ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Hapus & Mulai Ulang'),
+            child: const Text('Pulihkan Data'),
           ),
         ],
       ),
     );
 
-    if (step2 == true && mounted) {
-      final security = ref.read(securityServiceProvider);
-      await security.wipeAllSecurityData();
-
-      final prefs = ref.read(preferencesServiceProvider);
-      await prefs.clearAll();
-
-      ref.read(userNameProvider.notifier).updateName('');
-      await ref.read(isPinEnabledProvider.notifier).setEnabled(false);
-      ref.read(isAppLockedProvider.notifier).state = false;
-
-      ref.invalidate(walletRepositoryProvider);
-      ref.invalidate(categoryRepositoryProvider);
-      ref.invalidate(transactionRepositoryProvider);
-      ref.invalidate(savingGoalRepositoryProvider);
-
+    if (confirm == true && mounted) {
+      final success = await backup.restoreBackup(jsonContent);
       if (mounted) {
-        context.go('/panduan');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              success
+                  ? 'Data berhasil dipulihkan dari berkas cadangan.'
+                  : 'Gagal memulihkan berkas cadangan.',
+            ),
+            backgroundColor: success ? AppColors.income : AppColors.expense,
+          ),
+        );
       }
     }
   }
@@ -365,6 +526,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     children: [
                       Text(
                         userName.isNotEmpty ? userName : 'Belum diatur',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -373,6 +536,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       const SizedBox(height: 2),
                       Text(
                         'Nama Panggilan',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 12,
                           color: isDark
@@ -521,14 +686,138 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       }
                     },
                   ),
-                ],
+                  const Divider(height: 1),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD97706).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.help_outline_rounded,
+                        color: Color(0xFFD97706),
+                        size: 20,
+                      ),
+                    ),
+                    title: Text(
+                      'Ubah Pertanyaan Pemulihan',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () async {
+                      final confirmed = await _promptCurrentPin(
+                        title: 'Verifikasi PIN',
+                      );
+                      if (confirmed && context.mounted) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                const RecoveryQuestionsScreen(isEditing: true),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                const Divider(height: 1),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD97706).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.help_outline_rounded,
+                      color: Color(0xFFD97706),
+                      size: 20,
+                    ),
+                  ),
+                  title: Text(
+                    'Ubah Pertanyaan Pemulihan',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  trailing: const Icon(Icons.chevron_right_rounded),
+                  onTap: () async {
+                    final confirmed = await _promptCurrentPin(
+                      title: 'Verifikasi PIN',
+                    );
+                    if (confirmed && context.mounted) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              const RecoveryQuestionsScreen(isEditing: true),
+                        ),
+                      );
+                    }
+                  },
+                ),
               ],
-            ),
+            ],
           ),
+        ),
 
-          const SizedBox(height: 24),
+        const SizedBox(height: 24),
 
-          // Section: Tampilan & Tema
+        // Section: Privasi Keuangan
+        _buildSectionHeader('Privasi Keuangan'),
+        const SizedBox(height: 8),
+        AppCard(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            secondary: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                ref.watch(hideBalanceProvider)
+                    ? Icons.visibility_off_rounded
+                    : Icons.visibility_rounded,
+                color: AppColors.primary,
+                size: 20,
+              ),
+            ),
+            title: Text(
+              'Sembunyikan Saldo',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            subtitle: Text(
+              ref.watch(hideBalanceProvider)
+                  ? 'Semua nominal disembunyikan (Rp ••••••)'
+                  : 'Nominal saldo dan transaksi ditampilkan',
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 12,
+                color: isDark
+                    ? AppColors.darkTextSecondary
+                    : AppColors.lightTextSecondary,
+              ),
+            ),
+            value: ref.watch(hideBalanceProvider),
+            onChanged: (val) async {
+              await ref.read(hideBalanceProvider.notifier).setHidden(val);
+            },
+          ),
+        ),
+
+        const SizedBox(height: 24),
+
+        // Section: Tampilan & Tema
           _buildSectionHeader('Tampilan & Tema'),
           const SizedBox(height: 8),
           AppCard(
@@ -604,14 +893,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           : AppColors.lightTextSecondary,
                     ),
                   ),
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Belum tersedia: Fitur cadangkan data sedang disiapkan'),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  },
+                  onTap: _handleBackup,
                 ),
                 const Divider(height: 1),
                 ListTile(
@@ -644,14 +926,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           : AppColors.lightTextSecondary,
                     ),
                   ),
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Belum tersedia: Fitur pulihkan data sedang disiapkan'),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  },
+                  onTap: _handleRestore,
                 ),
               ],
             ),

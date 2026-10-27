@@ -31,7 +31,7 @@ class UserGuideScreen extends StatelessWidget {
         summary: 'Penyimpanan uang di Kas Tunai, Rekening Bank, dan E-Wallet.',
         steps: [
           'Tambah rekening bank atau akun e-wallet baru sesuai rekening yang Anda miliki.',
-          'Gunakan fitur transfer antar saldo jika memindahkan dana (misal: tarik tunai dari ATM BCA).',
+          'Gunakan fitur transfer antar saldo jika memindahkan dana (misal: tarik tunai dari ATM).',
           'Atur atau sesuaikan saldo akun kapan saja lewat tombol "Atur Saldo".',
         ],
       ),

@@ -85,3 +85,7 @@ Terinspirasi dari nuansa platform donasi kreator Indonesia yang hangat, ramah, d
 6. Jika ada keputusan yang meragukan, pilih opsi paling sederhana dan catat secara transparan.
 7. Gunakan istilah duit, bukan dompet atau catatan, pada teks antarmuka.
 8. Label di bawah sapaan Beranda memakai format MyDuitGweh (NamaDuit).
+9. Sembunyikan saldo (privasi) memakai masking "Rp ••••••" di seluruh aplikasi via MoneyText.
+10. Tidak memakai nama merek komersial (gunakan nama generik: Bank, E-Wallet, Tunai) dan sediakan opsi "Lainnya" di setiap pilihan.
+11. Dialog tanpa opsi tidak menampilkan dropdown (tampilkan label biasa jika hanya 1 opsi).
+12. Alur PIN memiliki 2 pertanyaan pemulihan & konfirmasi hapus data ketik "HAPUS" untuk Reset Total.

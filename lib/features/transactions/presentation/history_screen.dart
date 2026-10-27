@@ -22,7 +22,6 @@ class HistoryScreen extends ConsumerStatefulWidget {
 }
 
 class _HistoryScreenState extends ConsumerState<HistoryScreen> {
-  HistoryFilter _filter = HistoryFilter.monthly;
 
   bool _isWithinFilter(DateTime date, HistoryFilter filter) {
     final now = DateTime.now();
@@ -126,6 +125,12 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     });
 
     final activeDuit = ref.watch(activeDuitProvider);
+    final filterStr = ref.watch(historyFilterProvider);
+    final filter = switch (filterStr) {
+      'weekly' => HistoryFilter.weekly,
+      'monthly' => HistoryFilter.monthly,
+      _ => HistoryFilter.daily,
+    };
 
     return Scaffold(
       appBar: AppBar(
@@ -151,9 +156,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               ),
               child: Row(
                 children: [
-                  _buildFilterTab('Harian', HistoryFilter.daily),
-                  _buildFilterTab('Mingguan', HistoryFilter.weekly),
-                  _buildFilterTab('Bulanan', HistoryFilter.monthly),
+                  _buildFilterTab('Harian', HistoryFilter.daily, filter),
+                  _buildFilterTab('Mingguan', HistoryFilter.weekly, filter),
+                  _buildFilterTab('Bulanan', HistoryFilter.monthly, filter),
                 ],
               ),
             ),
@@ -170,14 +175,14 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                   if (!activeDuit.isSemua && t.ledger != activeDuit.ledgerKey) {
                     return false;
                   }
-                  return _isWithinFilter(t.date, _filter);
+                  return _isWithinFilter(t.date, filter);
                 }).toList();
 
                 if (filteredList.isEmpty) {
                   return EmptyState(
                     title:
                         'Belum Ada Transaksi ${activeDuit.isSemua ? '' : activeDuit.label}',
-                    message: _filter == HistoryFilter.daily
+                    message: filter == HistoryFilter.daily
                         ? 'Belum ada transaksi ${activeDuit.isSemua ? '' : 'untuk ${activeDuit.label} '}hari ini.'
                         : 'Mulai catat transaksi ${activeDuit.isSemua ? '' : 'untuk ${activeDuit.label} '}agar keuangan terpantau rapi.',
                     icon: Icons.receipt_long_outlined,
@@ -250,10 +255,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                                       : AppColors.lightTextSecondary,
                                 ),
                               ),
-                              Text(
-                                netSubtotal >= 0
-                                    ? '+ ${formatRupiah(netSubtotal)}'
-                                    : '- ${formatRupiah(netSubtotal.abs())}',
+                              MoneyText(
+                                amount: netSubtotal.abs(),
+                                prefix: netSubtotal >= 0 ? '+ ' : '- ',
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
@@ -401,10 +405,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                                     ),
 
                                     // Nominal Transaksi
-                                    Text(
-                                      isIncome
-                                          ? '+ ${formatRupiah(item.amount)}'
-                                          : '- ${formatRupiah(item.amount)}',
+                                    MoneyText(
+                                      amount: item.amount,
+                                      prefix: isIncome ? '+ ' : '- ',
                                       style: GoogleFonts.plusJakartaSans(
                                         fontSize: 15,
                                         fontWeight: FontWeight.w700,
@@ -439,16 +442,20 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     );
   }
 
-  Widget _buildFilterTab(String label, HistoryFilter filter) {
-    final isSelected = _filter == filter;
+  Widget _buildFilterTab(
+    String label,
+    HistoryFilter filterOption,
+    HistoryFilter currentFilter,
+  ) {
+    final isSelected = currentFilter == filterOption;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          setState(() {
-            _filter = filter;
-          });
+          ref
+              .read(historyFilterProvider.notifier)
+              .setFilter(filterOption.name);
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),

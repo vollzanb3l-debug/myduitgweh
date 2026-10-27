@@ -252,28 +252,45 @@ Future<void> _showTambahSaldoDialog(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Pilih Akun Tujuan:',
+                      wallets.length == 1 ? 'Tujuan:' : 'Pilih Tujuan:',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     const SizedBox(height: 6),
-                    DropdownButtonFormField<int>(
-                      value: selectedWalletId,
-                      items: wallets.map((w) {
-                        return DropdownMenuItem<int>(
-                          value: w.id!,
-                          child: Text(w.name),
-                        );
-                      }).toList(),
-                      onChanged: (val) {
-                        if (val != null) setState(() => selectedWalletId = val);
-                      },
-                      decoration: const InputDecoration(
-                        contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    if (wallets.length == 1)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF2ECE1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          wallets.first.name,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                      )
+                    else
+                      DropdownButtonFormField<int>(
+                        value: selectedWalletId,
+                        items: wallets.map((w) {
+                          return DropdownMenuItem<int>(
+                            value: w.id!,
+                            child: Text(w.name),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) setState(() => selectedWalletId = val);
+                        },
+                        decoration: const InputDecoration(
+                          contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        ),
                       ),
-                    ),
                     const SizedBox(height: 16),
                     Text(
                       'Nominal (Rp):',
@@ -399,29 +416,46 @@ Future<void> _showKoreksiSaldoDialog(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Pilih Akun:',
+                      wallets.length == 1 ? 'Tujuan:' : 'Pilih Tujuan:',
                       style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 6),
-                    DropdownButtonFormField<int>(
-                      value: selectedWalletId,
-                      items: wallets.map((w) {
-                        return DropdownMenuItem<int>(
-                          value: w.id!,
-                          child: Text(w.name),
-                        );
-                      }).toList(),
-                      onChanged: (val) async {
-                        if (val != null) {
-                          final newBal = await ref.read(transactionRepositoryProvider).calculateWalletBalance(val);
-                          setState(() {
-                            selectedWalletId = val;
-                            currentBalance = newBal;
-                            actualController.text = formatRupiah(newBal);
-                          });
-                        }
-                      },
-                    ),
+                    if (wallets.length == 1)
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF2ECE1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          wallets.first.name,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                      )
+                    else
+                      DropdownButtonFormField<int>(
+                        value: selectedWalletId,
+                        items: wallets.map((w) {
+                          return DropdownMenuItem<int>(
+                            value: w.id!,
+                            child: Text(w.name),
+                          );
+                        }).toList(),
+                        onChanged: (val) async {
+                          if (val != null) {
+                            final newBal = await ref.read(transactionRepositoryProvider).calculateWalletBalance(val);
+                            setState(() {
+                              selectedWalletId = val;
+                              currentBalance = newBal;
+                              actualController.text = formatRupiah(newBal);
+                            });
+                          }
+                        },
+                      ),
                     const SizedBox(height: 14),
                     Text(
                       'Saldo Saat Ini: ${formatRupiah(currentBalance)}',
@@ -822,22 +856,39 @@ Future<void> _showResetGoalProgressDialog(BuildContext context, WidgetRef ref) a
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Pilih Target:',
+                  goals.length == 1 ? 'Target:' : 'Pilih Target:',
                   style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 6),
-                DropdownButtonFormField<int>(
-                  value: selectedGoalId,
-                  items: goals.map((g) {
-                    return DropdownMenuItem<int>(
-                      value: g.id!,
-                      child: Text('${g.name} (${formatRupiah(g.currentAmount)})'),
-                    );
-                  }).toList(),
-                  onChanged: (val) {
-                    if (val != null) setState(() => selectedGoalId = val);
-                  },
-                ),
+                if (goals.length == 1)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF2ECE1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${goals.first.name} (${formatRupiah(goals.first.currentAmount)})',
+                      style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  )
+                else
+                  DropdownButtonFormField<int>(
+                    value: selectedGoalId,
+                    items: goals.map((g) {
+                      return DropdownMenuItem<int>(
+                        value: g.id!,
+                        child: Text('${g.name} (${formatRupiah(g.currentAmount)})'),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      if (val != null) setState(() => selectedGoalId = val);
+                    },
+                  ),
                 const SizedBox(height: 12),
                 Text(
                   'Target tidak akan dihapus, hanya nominal yang terkumpul akan kembali menjadi Rp 0.',

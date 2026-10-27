@@ -99,3 +99,43 @@ final themeModeProvider =
   final prefs = ref.watch(preferencesServiceProvider);
   return ThemeModeNotifier(prefs);
 });
+
+class HideBalanceNotifier extends StateNotifier<bool> {
+  final PreferencesService _prefs;
+
+  HideBalanceNotifier(this._prefs) : super(_prefs.isBalanceHidden);
+
+  Future<void> toggle() async {
+    final next = !state;
+    await _prefs.setIsBalanceHidden(next);
+    state = next;
+  }
+
+  Future<void> setHidden(bool value) async {
+    await _prefs.setIsBalanceHidden(value);
+    state = value;
+  }
+}
+
+final hideBalanceProvider =
+    StateNotifierProvider<HideBalanceNotifier, bool>((ref) {
+  final prefs = ref.watch(preferencesServiceProvider);
+  return HideBalanceNotifier(prefs);
+});
+
+class HistoryFilterNotifier extends StateNotifier<String> {
+  final PreferencesService _prefs;
+
+  HistoryFilterNotifier(this._prefs) : super(_prefs.historyFilter);
+
+  Future<void> setFilter(String filter) async {
+    await _prefs.setHistoryFilter(filter);
+    state = filter;
+  }
+}
+
+final historyFilterProvider =
+    StateNotifierProvider<HistoryFilterNotifier, String>((ref) {
+  final prefs = ref.watch(preferencesServiceProvider);
+  return HistoryFilterNotifier(prefs);
+});

@@ -1,3 +1,4 @@
+import '../database/app_database.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/category_model.dart';
@@ -8,6 +9,13 @@ import 'category_repository.dart';
 import 'saving_goal_repository.dart';
 import 'transaction_repository.dart';
 import 'wallet_repository.dart';
+
+// Database Provider
+final appDatabaseProvider = Provider<AppDatabase>((ref) {
+  final db = AppDatabase();
+  ref.onDispose(() => db.close());
+  return db;
+});
 
 // Provider Repository
 final walletRepositoryProvider = Provider<WalletRepository>((ref) {

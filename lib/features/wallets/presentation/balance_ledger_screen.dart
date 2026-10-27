@@ -1,3 +1,4 @@
+import '../../../core/providers/app_state_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -70,6 +71,26 @@ class _BalanceLedgerScreenState extends ConsumerState<BalanceLedgerScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 8,
+                    children: ['Tunai', 'Bank', 'E-Wallet', 'Lainnya'].map((opt) {
+                      return ActionChip(
+                        label: Text(opt),
+                        onPressed: () {
+                          if (opt != 'Lainnya') {
+                            setModalState(() {
+                              nameCtrl.text = opt;
+                            });
+                          } else {
+                            setModalState(() {
+                              nameCtrl.clear();
+                            });
+                          }
+                        },
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 12),
                   Text(
                     'Nama Akun Penyimpanan',
                     style: GoogleFonts.plusJakartaSans(
@@ -81,7 +102,7 @@ class _BalanceLedgerScreenState extends ConsumerState<BalanceLedgerScreen> {
                   TextField(
                     controller: nameCtrl,
                     decoration: const InputDecoration(
-                      hintText: 'Contoh: Uang Tunai, Bank Jago, GoPay, OVO',
+                      hintText: 'Contoh: Tunai, Bank, E-Wallet, atau nama sendiri',
                     ),
                   ),
                   if (!isEdit) ...[
@@ -119,9 +140,9 @@ class _BalanceLedgerScreenState extends ConsumerState<BalanceLedgerScreen> {
                     text: isEdit ? 'Simpan Perubahan' : 'Buat Akun Saldo',
                     onPressed: () async {
                       final name = nameCtrl.text.trim();
-                      if (name.isEmpty) {
+                      if (name.length < 2) {
                         setModalState(() {
-                          errorText = 'Nama akun wajib diisi';
+                          errorText = 'Nama akun wajib diisi minimal 2 karakter';
                         });
                         return;
                       }
@@ -232,7 +253,7 @@ class _BalanceLedgerScreenState extends ConsumerState<BalanceLedgerScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Akun Asal (Pengirim)',
+                    'Sumber:',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -263,7 +284,7 @@ class _BalanceLedgerScreenState extends ConsumerState<BalanceLedgerScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Akun Tujuan (Penerima)',
+                    'Pilih Tujuan:',
                     style: GoogleFonts.plusJakartaSans(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
@@ -517,44 +538,50 @@ class _BalanceLedgerScreenState extends ConsumerState<BalanceLedgerScreen> {
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(10),
+                            padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
                               color: AppColors.duitSaldo.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(10),
                             ),
                             child: const Icon(
                               Icons.account_balance_rounded,
                               color: AppColors.duitSaldo,
-                              size: 24,
+                              size: 20,
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 8),
                           Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            child: Row(
                               children: [
-                                Text(
-                                  'Total Duit Saldo',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 13,
+                                Flexible(
+                                  child: Text(
+                                    'Total Duit Saldo',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: isDark
+                                          ? AppColors.darkTextSecondary
+                                          : AppColors.lightTextSecondary,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                GestureDetector(
+                                  onTap: () {
+                                    final current = ref.read(hideBalanceProvider);
+                                    ref.read(hideBalanceProvider.notifier).setHidden(!current);
+                                  },
+                                  child: Icon(
+                                    ref.watch(hideBalanceProvider)
+                                        ? Icons.visibility_off_rounded
+                                        : Icons.visibility_rounded,
+                                    size: 18,
                                     color: isDark
                                         ? AppColors.darkTextSecondary
                                         : AppColors.lightTextSecondary,
                                   ),
-                                ),
-                                balanceAsync.when(
-                                  data: (bal) => AnimatedRupiahCounter(
-                                    amount: bal,
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w800,
-                                      color: isDark
-                                          ? Colors.white
-                                          : AppColors.darkAccent,
-                                    ),
-                                  ),
-                                  loading: () => const Text('Memuat...'),
-                                  error: (e, _) => const Text('Rp 0'),
                                 ),
                               ],
                             ),
@@ -564,18 +591,18 @@ class _BalanceLedgerScreenState extends ConsumerState<BalanceLedgerScreen> {
                               foregroundColor: AppColors.duitSaldo,
                               side: const BorderSide(color: AppColors.duitSaldo),
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
+                                horizontal: 8,
+                                vertical: 4,
                               ),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(8),
                               ),
                             ),
-                            icon: const Icon(Icons.tune_rounded, size: 16),
+                            icon: const Icon(Icons.tune_rounded, size: 14),
                             label: Text(
                               'Atur Saldo',
                               style: GoogleFonts.plusJakartaSans(
-                                fontSize: 12,
+                                fontSize: 11,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
@@ -586,6 +613,23 @@ class _BalanceLedgerScreenState extends ConsumerState<BalanceLedgerScreen> {
                             ),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 12),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: balanceAsync.when(
+                          data: (bal) => AnimatedRupiahCounter(
+                            amount: bal,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w800,
+                              color: isDark ? Colors.white : AppColors.darkAccent,
+                            ),
+                          ),
+                          loading: () => const Text('Memuat...'),
+                          error: (e, _) => const Text('Rp 0'),
+                        ),
                       ),
                       const SizedBox(height: 16),
                       const Divider(height: 1),
@@ -723,8 +767,8 @@ class _BalanceLedgerScreenState extends ConsumerState<BalanceLedgerScreen> {
                                     ),
                                     const SizedBox(height: 2),
                                     balAsync.when(
-                                      data: (bal) => Text(
-                                        formatRupiah(bal),
+                                      data: (bal) => MoneyText(
+                                        amount: bal,
                                         style: GoogleFonts.plusJakartaSans(
                                           fontWeight: FontWeight.w700,
                                           fontSize: 13,
@@ -926,8 +970,9 @@ class _BalanceLedgerScreenState extends ConsumerState<BalanceLedgerScreen> {
                                   ],
                                 ),
                               ),
-                              Text(
-                                '${isExpense ? "-" : (isIncome ? "+" : "")}${formatRupiah(tx.amount)}',
+                              MoneyText(
+                                amount: tx.amount,
+                                prefix: isExpense ? '- ' : (isIncome ? '+ ' : ''),
                                 style: GoogleFonts.plusJakartaSans(
                                   fontWeight: FontWeight.w700,
                                   fontSize: 14,

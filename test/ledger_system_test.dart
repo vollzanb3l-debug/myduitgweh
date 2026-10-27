@@ -39,7 +39,7 @@ void main() {
 
       final balanceWallets = await walletRepo.getWalletsByLedger('balance');
       expect(balanceWallets.length, 3);
-      expect(balanceWallets.map((w) => w.name), containsAll(['Tunai', 'Bank BCA', 'E-Wallet']));
+      expect(balanceWallets.map((w) => w.name), containsAll(['Tunai', 'Bank', 'E-Wallet']));
 
       final savingWallets = await walletRepo.getWalletsByLedger('saving');
       expect(savingWallets.length, 1);

@@ -15,7 +15,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -36,8 +36,25 @@ class AppDatabase extends _$AppDatabase {
         // Tahap 13: Kosongkan data contoh pencapaian lama jika ada
         await delete(savingGoals).go();
       }
+      if (from < 4) {
+        // Tahap 14: Ganti nama merek menjadi nama generik di database
+        await customStatement(
+          "UPDATE wallets SET name = 'Bank' WHERE name LIKE '%BCA%' OR name LIKE '%Mandiri%' OR name LIKE '%BRI%' OR name LIKE '%BNI%'",
+        );
+        await customStatement(
+          "UPDATE wallets SET name = 'E-Wallet' WHERE name LIKE '%GoPay%' OR name LIKE '%OVO%' OR name LIKE '%Dana%'",
+        );
+      }
     },
   );
+
+  Future<void> resetAll() async {
+    await delete(transactions).go();
+    await delete(savingGoals).go();
+    await delete(categories).go();
+    await delete(wallets).go();
+    await _seedInitialData();
+  }
 
   Future<void> _seedInitialData() async {
     // 1. Masukkan dompet default

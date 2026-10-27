@@ -7,4 +7,5 @@ export 'animated_currency.dart';
 export 'animated_list_item.dart';
 export 'global_error_view.dart';
 export 'app_async_builder.dart';
+export 'money_text.dart';
 

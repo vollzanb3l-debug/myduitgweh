@@ -115,6 +115,7 @@ abstract class TransactionRepository {
   Future<void> resetLedgerAndWipeHistory({
     required String ledger,
   });
+  void clearAll();
 }
 
 class InMemoryTransactionRepository implements TransactionRepository {
@@ -656,6 +657,13 @@ class InMemoryTransactionRepository implements TransactionRepository {
     _transactions.removeWhere((id, tx) =>
         tx.ledger == ledger || walletIds.contains(tx.walletId));
 
+    _notify();
+  }
+
+  @override
+  void clearAll() {
+    _transactions.clear();
+    _nextId = 1;
     _notify();
   }
 

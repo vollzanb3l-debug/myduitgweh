@@ -196,6 +196,10 @@ void main() {
             builder: (_, __) => const CreatePinScreen(isChangingPin: false),
           ),
           GoRoute(
+            path: '/pertanyaan-pemulihan',
+            builder: (_, __) => const Scaffold(body: Text('Layar Pertanyaan Pemulihan Mock')),
+          ),
+          GoRoute(
             path: '/beranda',
             builder: (_, __) => const Scaffold(body: Text('Layar Beranda Mock')),
           ),
@@ -244,7 +248,8 @@ void main() {
       expect(await securityService.isPinConfigured(), isTrue);
       expect(await securityService.verifyPin('1234'), isTrue);
       expect(prefsService.isPinEnabled, isTrue);
-      expect(find.text('Layar Beranda Mock'), findsOneWidget);
+      // Di Tahap 14, setelah PIN dibuat, langsung diarahkan ke layar Pertanyaan Pemulihan
+      expect(find.text('Pertanyaan Pemulihan'), findsOneWidget);
     });
 
     testWidgets('5. Layar Kunci PIN: salah 5 kali kena blokir 30 detik & opsi Lupa PIN', (
@@ -306,28 +311,32 @@ void main() {
       expect(find.textContaining('Terlalu banyak percobaan'), findsOneWidget);
       expect(securityService.isLockedOut, isTrue);
 
-      // Ketuk "Lupa PIN?" menampilkan dialog konfirmasi langkah 1
+      // Ketuk "Lupa PIN?" menampilkan alur reset jika pertanyaan belum diatur
       await tester.ensureVisible(find.text('Lupa PIN?'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Lupa PIN?'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Lupa PIN?'), findsWidgets);
+      expect(find.text('Hapus Semua Data?'), findsOneWidget);
       expect(
-        find.textContaining('Satu-satunya cara untuk masuk kembali adalah dengan MENGHAPUS SEMUA DATA'),
+        find.textContaining('SEMUA DATA AKAN HILANG PERMANEN DAN TIDAK BISA DIKEMBALIKAN'),
         findsOneWidget,
       );
-      expect(find.text('Lanjut ke Hapus Data'), findsOneWidget);
+      expect(find.text('Lanjut'), findsOneWidget);
 
-      // Ketuk Lanjut ke Hapus Data untuk memunculkan langkah 2
-      await tester.tap(find.text('Lanjut ke Hapus Data'));
+      // Ketuk Lanjut untuk memunculkan langkah 2 konfirmasi ketik "HAPUS"
+      await tester.tap(find.text('Lanjut'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Konfirmasi Hapus Permanen'), findsOneWidget);
-      expect(find.text('Ya, Hapus Semua'), findsOneWidget);
+      expect(find.text('Ketik "HAPUS" untuk Konfirmasi'), findsOneWidget);
+      expect(find.text('HAPUS SEMUA DATA'), findsOneWidget);
 
-      // Ketuk Ya, Hapus Semua
-      await tester.tap(find.text('Ya, Hapus Semua'));
+      // Masukkan teks HAPUS ke kolom konfirmasi
+      await tester.enterText(find.byType(TextField), 'HAPUS');
+      await tester.pumpAndSettle();
+
+      // Ketuk HAPUS SEMUA DATA
+      await tester.tap(find.text('HAPUS SEMUA DATA'));
       await tester.pumpAndSettle();
 
       // Memverifikasi data terhapus dan navigasi ke /panduan

@@ -24,7 +24,7 @@ class InitialData {
     ),
     WalletItem(
       id: 3,
-      name: 'Bank BCA',
+      name: 'Bank',
       type: 'balance',
       ledger: 'balance',
       initialBalance: 0,

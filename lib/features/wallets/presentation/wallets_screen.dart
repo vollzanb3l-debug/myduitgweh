@@ -7,7 +7,6 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_labels.dart';
 import '../../../core/models/duit_type.dart';
 import '../../../core/providers/app_state_provider.dart';
-import '../../../core/utils/formatters.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../data/repositories/providers.dart';
 
@@ -89,8 +88,8 @@ class WalletsScreen extends ConsumerWidget {
                             : AppColors.lightTextSecondary,
                       ),
                     ),
-                    Text(
-                      formatRupiah(bal),
+                    MoneyText(
+                      amount: bal,
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
@@ -134,8 +133,8 @@ class WalletsScreen extends ConsumerWidget {
                         ),
                       ),
                       balanceBalAsync.when(
-                        data: (bal) => Text(
-                          formatRupiah(bal),
+                        data: (bal) => MoneyText(
+                          amount: bal,
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
@@ -201,8 +200,8 @@ class WalletsScreen extends ConsumerWidget {
                             : AppColors.lightTextSecondary,
                       ),
                     ),
-                    Text(
-                      formatRupiah(bal),
+                    MoneyText(
+                      amount: bal,
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
@@ -255,13 +254,26 @@ class WalletsScreen extends ConsumerWidget {
                                   : AppColors.lightTextSecondary,
                             ),
                           ),
-                          Text(
-                            '${formatRupiah(totalCurrent)} (${(progress * 100).toInt()}%)',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.duitPencapaian,
-                            ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              MoneyText(
+                                amount: totalCurrent,
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.duitPencapaian,
+                                ),
+                              ),
+                              Text(
+                                ' (${(progress * 100).toInt()}%)',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.duitPencapaian,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),

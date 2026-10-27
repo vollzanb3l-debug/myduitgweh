@@ -14,6 +14,7 @@ class AboutText {
   // Bagian Tentang Pembuat
   static const String authorName = 'Vollzanbel';
   static const String authorEmail = 'vollzanb3l@gmail.com';
+  static const String authorWhatsApp = '083132656283';
 
   static const String authorBio =
       'Dibuat dengan sepenuh hati untuk membantu teman-teman mengelola keuangan dengan rapi, '

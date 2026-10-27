@@ -1,3 +1,4 @@
+import '../../../core/providers/app_state_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -24,15 +25,18 @@ class GoalsLedgerScreen extends ConsumerStatefulWidget {
 class _GoalsLedgerScreenState extends ConsumerState<GoalsLedgerScreen> {
   // Daftar pilihan ikon target pencapaian
   static const List<Map<String, dynamic>> _iconOptions = [
-    {'name': 'phone_android_rounded', 'label': 'Gadget'},
+    {'name': 'phone_android_rounded', 'label': 'Handphone'},
     {'name': 'laptop_rounded', 'label': 'Laptop'},
-    {'name': 'directions_car_rounded', 'label': 'Kendaraan'},
-    {'name': 'home_rounded', 'label': 'Rumah'},
+    {'name': 'two_wheeler_rounded', 'label': 'Motor'},
     {'name': 'flight_rounded', 'label': 'Liburan'},
     {'name': 'school_rounded', 'label': 'Pendidikan'},
+    {'name': 'home_rounded', 'label': 'Rumah'},
+    {'name': 'directions_car_rounded', 'label': 'Kendaraan'},
+    {'name': 'favorite_rounded', 'label': 'Kesehatan'},
+    {'name': 'celebration_rounded', 'label': 'Pernikahan'},
+    {'name': 'sports_esports_rounded', 'label': 'Hobi'},
     {'name': 'redeem_rounded', 'label': 'Hadiah'},
-    {'name': 'emoji_events_rounded', 'label': 'Impian'},
-    {'name': 'flag_rounded', 'label': 'Target'},
+    {'name': 'star_rounded', 'label': 'Lainnya'},
   ];
 
   // Dialog Tambah / Edit Target Pencapaian
@@ -89,6 +93,46 @@ class _GoalsLedgerScreenState extends ConsumerState<GoalsLedgerScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: [
+                        'Handphone',
+                        'Laptop',
+                        'Motor',
+                        'Liburan',
+                        'Pendidikan',
+                        'Rumah',
+                        'Kendaraan',
+                        'Kesehatan',
+                        'Pernikahan',
+                        'Hobi',
+                        'Hadiah',
+                        'Lainnya',
+                      ].map((preset) {
+                        return ActionChip(
+                          label: Text(preset),
+                          onPressed: () {
+                            if (preset != 'Lainnya') {
+                              setModalState(() {
+                                nameCtrl.text = preset;
+                                final match = _iconOptions.firstWhere(
+                                  (opt) => opt['label'] == preset,
+                                  orElse: () => {'name': 'star_rounded'},
+                                );
+                                selectedIcon = match['name'] as String;
+                              });
+                            } else {
+                              setModalState(() {
+                                nameCtrl.clear();
+                                selectedIcon = 'star_rounded';
+                              });
+                            }
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 12),
                     Text(
                       'Nama Barang / Target',
                       style: GoogleFonts.plusJakartaSans(
@@ -444,36 +488,56 @@ class _GoalsLedgerScreenState extends ConsumerState<GoalsLedgerScreen> {
                           if (deductFromWallet && allWallets.isNotEmpty) ...[
                             const SizedBox(height: 8),
                             Text(
-                              'Pilih Sumber Dana:',
+                              allWallets.length == 1 ? 'Sumber Dana:' : 'Pilih Sumber Dana:',
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                             const SizedBox(height: 4),
-                            DropdownButtonFormField<int>(
-                              value: selectedSourceWalletId,
-                              decoration: const InputDecoration(
-                                isDense: true,
+                            if (allWallets.length == 1)
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: isDark ? AppColors.darkCard : Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                                  ),
+                                ),
+                                child: Text(
+                                  '${allWallets.first.name} (${allWallets.first.ledger == "daily" ? "Harian" : (allWallets.first.ledger == "balance" ? "Saldo" : "Tabungan")})',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              )
+                            else
+                              DropdownButtonFormField<int>(
+                                value: selectedSourceWalletId,
+                                decoration: const InputDecoration(
+                                  isDense: true,
+                                ),
+                                items: allWallets.map((w) {
+                                  final ledgerLabel = w.ledger == 'daily'
+                                      ? 'Harian'
+                                      : (w.ledger == 'balance'
+                                          ? 'Saldo'
+                                          : 'Tabungan');
+                                  return DropdownMenuItem<int>(
+                                    value: w.id,
+                                    child: Text('${w.name} ($ledgerLabel)'),
+                                  );
+                                }).toList(),
+                                onChanged: (val) {
+                                  if (val != null) {
+                                    setModalState(
+                                        () => selectedSourceWalletId = val);
+                                  }
+                                },
                               ),
-                              items: allWallets.map((w) {
-                                final ledgerLabel = w.ledger == 'daily'
-                                    ? 'Harian'
-                                    : (w.ledger == 'balance'
-                                        ? 'Saldo'
-                                        : 'Tabungan');
-                                return DropdownMenuItem<int>(
-                                  value: w.id,
-                                  child: Text('${w.name} ($ledgerLabel)'),
-                                );
-                              }).toList(),
-                              onChanged: (val) {
-                                if (val != null) {
-                                  setModalState(
-                                      () => selectedSourceWalletId = val);
-                                }
-                              },
-                            ),
                           ],
                         ],
                       ),
@@ -739,14 +803,39 @@ class _GoalsLedgerScreenState extends ConsumerState<GoalsLedgerScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text(
-                                      'Total Terkumpul Duit Pencapaian',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 13,
-                                        color: isDark
-                                            ? AppColors.darkTextSecondary
-                                            : AppColors.lightTextSecondary,
-                                      ),
+Row(
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            'Total Terkumpul Duit Pencapaian',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: isDark
+                                                  ? AppColors.darkTextSecondary
+                                                  : AppColors.lightTextSecondary,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                        GestureDetector(
+                                          onTap: () {
+                                            final current = ref.read(hideBalanceProvider);
+                                            ref.read(hideBalanceProvider.notifier).setHidden(!current);
+                                          },
+                                          child: Icon(
+                                            ref.watch(hideBalanceProvider)
+                                                ? Icons.visibility_off_rounded
+                                                : Icons.visibility_rounded,
+                                            size: 18,
+                                            color: isDark
+                                                ? AppColors.darkTextSecondary
+                                                : AppColors.lightTextSecondary,
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                     AnimatedRupiahCounter(
                                       amount: totalCurrent,
@@ -825,7 +914,7 @@ class _GoalsLedgerScreenState extends ConsumerState<GoalsLedgerScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                'Target Total: ${formatRupiah(totalTarget)}',
+                                ref.watch(hideBalanceProvider) ? 'Target Total: Rp ••••••' : 'Target Total: ${formatRupiah(totalTarget)}',
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 12,
                                   color: isDark
@@ -976,7 +1065,7 @@ class _GoalsLedgerScreenState extends ConsumerState<GoalsLedgerScreen> {
                                         CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        '${formatRupiah(g.currentAmount)} / ${formatRupiah(g.targetAmount)}',
+                                        ref.watch(hideBalanceProvider) ? 'Rp •••••• / Rp ••••••' : '${formatRupiah(g.currentAmount)} / ${formatRupiah(g.targetAmount)}',
                                         style: GoogleFonts.plusJakartaSans(
                                           fontWeight: FontWeight.w700,
                                           fontSize: 13,

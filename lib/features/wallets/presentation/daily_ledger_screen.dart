@@ -1,3 +1,4 @@
+import '../../../core/providers/app_state_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -75,48 +76,51 @@ class DailyLedgerScreen extends ConsumerWidget {
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.all(10),
+                            padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
                               color: AppColors.duitHarian.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(10),
                             ),
                             child: const Icon(
                               Icons.today_rounded,
                               color: AppColors.duitHarian,
-                              size: 24,
+                              size: 20,
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 10),
                           Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Saldo Duit Harian',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontSize: 13,
-                                    color: isDark
-                                        ? AppColors.darkTextSecondary
-                                        : AppColors.lightTextSecondary,
-                                  ),
-                                ),
-                                balanceAsync.when(
-                                  data: (bal) => AnimatedRupiahCounter(
-                                    amount: bal,
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w800,
-                                      color: isDark
-                                          ? Colors.white
-                                          : AppColors.darkAccent,
-                                    ),
-                                  ),
-                                  loading: () => const Text('Memuat...'),
-                                  error: (e, _) => const Text('Rp 0'),
-                                ),
-                              ],
+                            child: Text(
+                              'Saldo Duit Harian',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: isDark
+                                    ? AppColors.darkTextSecondary
+                                    : AppColors.lightTextSecondary,
+                              ),
                             ),
                           ),
+                          IconButton(
+                            icon: Icon(
+                              ref.watch(hideBalanceProvider)
+                                  ? Icons.visibility_off_rounded
+                                  : Icons.visibility_rounded,
+                              size: 18,
+                              color: isDark
+                                  ? AppColors.darkTextSecondary
+                                  : AppColors.lightTextSecondary,
+                            ),
+                            tooltip: ref.watch(hideBalanceProvider)
+                                ? 'Tampilkan Saldo'
+                                : 'Sembunyikan Saldo',
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () =>
+                                ref.read(hideBalanceProvider.notifier).toggle(),
+                          ),
+                          const SizedBox(width: 8),
                           OutlinedButton.icon(
                             style: OutlinedButton.styleFrom(
                               foregroundColor: AppColors.duitHarian,
@@ -144,6 +148,25 @@ class DailyLedgerScreen extends ConsumerWidget {
                             ),
                           ),
                         ],
+                      ),
+                      const SizedBox(height: 12),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: balanceAsync.when(
+                          data: (bal) => AnimatedRupiahCounter(
+                            amount: bal,
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w800,
+                              color: isDark
+                                  ? Colors.white
+                                  : AppColors.darkAccent,
+                            ),
+                          ),
+                          loading: () => const Text('Memuat...'),
+                          error: (e, _) => const Text('Rp 0'),
+                        ),
                       ),
                       const SizedBox(height: 16),
                       const Divider(height: 1),

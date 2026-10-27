@@ -72,7 +72,7 @@ class StatisticsScreen extends ConsumerWidget {
                         const SizedBox(height: 24),
 
                         // 3. Donut Chart Pengeluaran per Kategori
-                        _buildCategoryPieChartSection(context, data),
+                        _buildCategoryPieChartSection(context, ref, data),
 
                         const SizedBox(height: 24),
 
@@ -390,7 +390,7 @@ class StatisticsScreen extends ConsumerWidget {
   }
 
   // 3. Donut Chart Pengeluaran per Kategori
-  Widget _buildCategoryPieChartSection(BuildContext context, StatisticsData data) {
+  Widget _buildCategoryPieChartSection(BuildContext context, WidgetRef ref, StatisticsData data) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return AppCard(
@@ -484,7 +484,7 @@ class StatisticsScreen extends ConsumerWidget {
                       ),
                     ),
                     Text(
-                      '$pct% (${formatRupiah(item.totalAmount)})',
+                      ref.watch(hideBalanceProvider) ? '$pct% (Rp ••••••)' : '$pct% (${formatRupiah(item.totalAmount)})',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
@@ -717,8 +717,8 @@ class StatisticsScreen extends ConsumerWidget {
                             ],
                           ),
                         ),
-                        Text(
-                          formatRupiah(item.totalAmount),
+                        MoneyText(
+                          amount: item.totalAmount,
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
