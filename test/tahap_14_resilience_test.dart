@@ -274,7 +274,7 @@ void main() {
       expect(find.byType(DropdownButtonFormField<int>), findsNothing);
 
       // Menampilkan teks nama akun
-      expect(find.text('Uang Harian'), findsOneWidget);
+      expect(find.text('Uang Utama'), findsOneWidget);
     });
 
     testWidgets('e.2 Dialog Atur Saldo menampilkan dropdown jika opsi lebih dari satu', (

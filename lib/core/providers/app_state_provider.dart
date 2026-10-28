@@ -100,27 +100,150 @@ final themeModeProvider =
   return ThemeModeNotifier(prefs);
 });
 
-class HideBalanceNotifier extends StateNotifier<bool> {
+String normalizeDuitKey(dynamic duit) {
+  if (duit == null) return 'utama';
+  if (duit is DuitType) {
+    return duit == DuitType.harian ? 'utama' : duit.name;
+  }
+  if (duit is DuitSelection) {
+    if (duit.isSemua) return 'semua';
+    return duit.type == DuitType.harian ? 'utama' : (duit.type?.name ?? 'utama');
+  }
+  if (duit is String) {
+    final lower = duit.toLowerCase().trim();
+    if (lower == 'harian' || lower == 'daily') return 'utama';
+    if (lower == 'saving') return 'tabungan';
+    if (lower == 'goal') return 'pencapaian';
+    return lower;
+  }
+  return 'utama';
+}
+
+class DuitHideBalanceNotifier extends StateNotifier<Map<String, bool>> {
   final PreferencesService _prefs;
 
-  HideBalanceNotifier(this._prefs) : super(_prefs.isBalanceHidden);
+  DuitHideBalanceNotifier(this._prefs) : super(_prefs.getAllDuitHideBalance());
 
-  Future<void> toggle() async {
-    final next = !state;
-    await _prefs.setIsBalanceHidden(next);
-    state = next;
+  bool isHidden(String duitKey) {
+    final key = normalizeDuitKey(duitKey);
+    return state[key] ?? false;
   }
 
-  Future<void> setHidden(bool value) async {
+  Future<void> toggle(String duitKey) async {
+    final key = normalizeDuitKey(duitKey);
+    final current = state[key] ?? false;
+    final next = !current;
+    await _prefs.setHideBalanceForDuit(key, next);
+    state = {...state, key: next};
+  }
+
+  Future<void> setHidden(String duitKey, bool hidden) async {
+    final key = normalizeDuitKey(duitKey);
+    await _prefs.setHideBalanceForDuit(key, hidden);
+    state = {...state, key: hidden};
+  }
+
+  Future<void> setAll(bool hidden) async {
+    for (final k in ['utama', 'saldo', 'tabungan', 'pencapaian', 'semua']) {
+      await _prefs.setHideBalanceForDuit(k, hidden);
+    }
+    state = {
+      'utama': hidden,
+      'saldo': hidden,
+      'tabungan': hidden,
+      'pencapaian': hidden,
+      'semua': hidden,
+    };
+  }
+
+  void refreshFromPrefs() {
+    state = _prefs.getAllDuitHideBalance();
+  }
+}
+
+final duitHideBalanceProvider =
+    StateNotifierProvider<DuitHideBalanceNotifier, Map<String, bool>>((ref) {
+  final prefs = ref.watch(preferencesServiceProvider);
+  return DuitHideBalanceNotifier(prefs);
+});
+
+final isDuitHiddenProvider = Provider.family<bool, String>((ref, duitKey) {
+  final hideMap = ref.watch(duitHideBalanceProvider);
+  final key = normalizeDuitKey(duitKey);
+  return hideMap[key] ?? false;
+});
+
+class HideBalanceNotifier extends StateNotifier<bool> {
+  final Ref _ref;
+  final PreferencesService _prefs;
+
+  HideBalanceNotifier(this._ref, this._prefs)
+      : super(_prefs.isBalanceHidden) {
+    _ref.listen<Map<String, bool>>(duitHideBalanceProvider, (prev, next) {
+      final active = _ref.read(activeDuitProvider);
+      final key = active.isSemua
+          ? 'semua'
+          : (active.type == DuitType.harian ? 'utama' : active.type?.name ?? 'utama');
+      final val = next[key] ?? _prefs.isBalanceHidden;
+      if (mounted && state != val) {
+        state = val;
+      }
+    });
+
+    _ref.listen<DuitSelection>(activeDuitProvider, (prev, next) {
+      final key = next.isSemua
+          ? 'semua'
+          : (next.type == DuitType.harian ? 'utama' : next.type?.name ?? 'utama');
+      final hideMap = _ref.read(duitHideBalanceProvider);
+      final val = hideMap[key] ?? _prefs.isBalanceHidden;
+      if (mounted && state != val) {
+        state = val;
+      }
+    });
+
+    final active = _ref.read(activeDuitProvider);
+    final key = active.isSemua
+        ? 'semua'
+        : (active.type == DuitType.harian ? 'utama' : active.type?.name ?? 'utama');
+    final hideMap = _ref.read(duitHideBalanceProvider);
+    state = hideMap[key] ?? _prefs.isBalanceHidden;
+  }
+
+  Future<void> toggle([String? specificKey]) async {
+    final active = _ref.read(activeDuitProvider);
+    final key = specificKey ??
+        (active.isSemua
+            ? 'semua'
+            : (active.type == DuitType.harian ? 'utama' : active.type?.name ?? 'utama'));
+    await _ref.read(duitHideBalanceProvider.notifier).toggle(key);
+    final isHid = _ref.read(duitHideBalanceProvider.notifier).isHidden(key);
+    if (mounted) {
+      state = isHid;
+    }
+    await _prefs.setIsBalanceHidden(isHid);
+  }
+
+  Future<void> setHidden(bool value, [String? specificKey]) async {
+    if (specificKey != null) {
+      await _ref.read(duitHideBalanceProvider.notifier).setHidden(specificKey, value);
+    } else {
+      final active = _ref.read(activeDuitProvider);
+      final key = active.isSemua
+          ? 'semua'
+          : (active.type == DuitType.harian ? 'utama' : active.type?.name ?? 'utama');
+      await _ref.read(duitHideBalanceProvider.notifier).setHidden(key, value);
+    }
+    if (mounted) {
+      state = value;
+    }
     await _prefs.setIsBalanceHidden(value);
-    state = value;
   }
 }
 
 final hideBalanceProvider =
     StateNotifierProvider<HideBalanceNotifier, bool>((ref) {
   final prefs = ref.watch(preferencesServiceProvider);
-  return HideBalanceNotifier(prefs);
+  return HideBalanceNotifier(ref, prefs);
 });
 
 class HistoryFilterNotifier extends StateNotifier<String> {

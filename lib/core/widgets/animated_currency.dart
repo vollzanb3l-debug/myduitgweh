@@ -13,6 +13,7 @@ class AnimatedRupiahCounter extends ConsumerWidget {
   final String prefix;
   final bool forceShow;
   final Alignment alignment;
+  final dynamic duit;
 
   const AnimatedRupiahCounter({
     super.key,
@@ -22,11 +23,18 @@ class AnimatedRupiahCounter extends ConsumerWidget {
     this.prefix = '',
     this.forceShow = false,
     this.alignment = Alignment.centerLeft,
+    this.duit,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isHidden = ref.watch(hideBalanceProvider);
+    final bool isHidden;
+    if (duit != null) {
+      final key = normalizeDuitKey(duit);
+      isHidden = ref.watch(isDuitHiddenProvider(key));
+    } else {
+      isHidden = ref.watch(hideBalanceProvider);
+    }
 
     if (isHidden && !forceShow) {
       return FittedBox(

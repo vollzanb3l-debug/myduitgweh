@@ -739,6 +739,12 @@ class $TransactionsTable extends Transactions
   late final GeneratedColumn<int> goalId = GeneratedColumn<int>(
       'goal_id', aliasedName, true,
       type: DriftSqlType.int, requiredDuringInsert: false);
+  static const VerificationMeta _transferPartnerIdMeta =
+      const VerificationMeta('transferPartnerId');
+  @override
+  late final GeneratedColumn<int> transferPartnerId = GeneratedColumn<int>(
+      'transfer_partner_id', aliasedName, true,
+      type: DriftSqlType.int, requiredDuringInsert: false);
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
@@ -758,6 +764,7 @@ class $TransactionsTable extends Transactions
         note,
         ledger,
         goalId,
+        transferPartnerId,
         createdAt
       ];
   @override
@@ -817,6 +824,12 @@ class $TransactionsTable extends Transactions
       context.handle(_goalIdMeta,
           goalId.isAcceptableOrUnknown(data['goal_id']!, _goalIdMeta));
     }
+    if (data.containsKey('transfer_partner_id')) {
+      context.handle(
+          _transferPartnerIdMeta,
+          transferPartnerId.isAcceptableOrUnknown(
+              data['transfer_partner_id']!, _transferPartnerIdMeta));
+    }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
           createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
@@ -848,6 +861,8 @@ class $TransactionsTable extends Transactions
           .read(DriftSqlType.string, data['${effectivePrefix}ledger'])!,
       goalId: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}goal_id']),
+      transferPartnerId: attachedDatabase.typeMapping.read(
+          DriftSqlType.int, data['${effectivePrefix}transfer_partner_id']),
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
     );
@@ -869,6 +884,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
   final String? note;
   final String ledger;
   final int? goalId;
+  final int? transferPartnerId;
   final DateTime createdAt;
   const Transaction(
       {required this.id,
@@ -880,6 +896,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       this.note,
       required this.ledger,
       this.goalId,
+      this.transferPartnerId,
       required this.createdAt});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -897,6 +914,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
     if (!nullToAbsent || goalId != null) {
       map['goal_id'] = Variable<int>(goalId);
     }
+    if (!nullToAbsent || transferPartnerId != null) {
+      map['transfer_partner_id'] = Variable<int>(transferPartnerId);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -913,6 +933,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       ledger: Value(ledger),
       goalId:
           goalId == null && nullToAbsent ? const Value.absent() : Value(goalId),
+      transferPartnerId: transferPartnerId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(transferPartnerId),
       createdAt: Value(createdAt),
     );
   }
@@ -930,6 +953,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       note: serializer.fromJson<String?>(json['note']),
       ledger: serializer.fromJson<String>(json['ledger']),
       goalId: serializer.fromJson<int?>(json['goalId']),
+      transferPartnerId: serializer.fromJson<int?>(json['transferPartnerId']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -946,6 +970,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       'note': serializer.toJson<String?>(note),
       'ledger': serializer.toJson<String>(ledger),
       'goalId': serializer.toJson<int?>(goalId),
+      'transferPartnerId': serializer.toJson<int?>(transferPartnerId),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -960,6 +985,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           Value<String?> note = const Value.absent(),
           String? ledger,
           Value<int?> goalId = const Value.absent(),
+          Value<int?> transferPartnerId = const Value.absent(),
           DateTime? createdAt}) =>
       Transaction(
         id: id ?? this.id,
@@ -971,6 +997,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
         note: note.present ? note.value : this.note,
         ledger: ledger ?? this.ledger,
         goalId: goalId.present ? goalId.value : this.goalId,
+        transferPartnerId: transferPartnerId.present
+            ? transferPartnerId.value
+            : this.transferPartnerId,
         createdAt: createdAt ?? this.createdAt,
       );
   Transaction copyWithCompanion(TransactionsCompanion data) {
@@ -985,6 +1014,9 @@ class Transaction extends DataClass implements Insertable<Transaction> {
       note: data.note.present ? data.note.value : this.note,
       ledger: data.ledger.present ? data.ledger.value : this.ledger,
       goalId: data.goalId.present ? data.goalId.value : this.goalId,
+      transferPartnerId: data.transferPartnerId.present
+          ? data.transferPartnerId.value
+          : this.transferPartnerId,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -1001,6 +1033,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           ..write('note: $note, ')
           ..write('ledger: $ledger, ')
           ..write('goalId: $goalId, ')
+          ..write('transferPartnerId: $transferPartnerId, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -1008,7 +1041,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
 
   @override
   int get hashCode => Object.hash(id, type, amount, categoryId, walletId, date,
-      note, ledger, goalId, createdAt);
+      note, ledger, goalId, transferPartnerId, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1022,6 +1055,7 @@ class Transaction extends DataClass implements Insertable<Transaction> {
           other.note == this.note &&
           other.ledger == this.ledger &&
           other.goalId == this.goalId &&
+          other.transferPartnerId == this.transferPartnerId &&
           other.createdAt == this.createdAt);
 }
 
@@ -1035,6 +1069,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
   final Value<String?> note;
   final Value<String> ledger;
   final Value<int?> goalId;
+  final Value<int?> transferPartnerId;
   final Value<DateTime> createdAt;
   const TransactionsCompanion({
     this.id = const Value.absent(),
@@ -1046,6 +1081,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.note = const Value.absent(),
     this.ledger = const Value.absent(),
     this.goalId = const Value.absent(),
+    this.transferPartnerId = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   TransactionsCompanion.insert({
@@ -1058,6 +1094,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     this.note = const Value.absent(),
     this.ledger = const Value.absent(),
     this.goalId = const Value.absent(),
+    this.transferPartnerId = const Value.absent(),
     this.createdAt = const Value.absent(),
   })  : type = Value(type),
         amount = Value(amount),
@@ -1074,6 +1111,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     Expression<String>? note,
     Expression<String>? ledger,
     Expression<int>? goalId,
+    Expression<int>? transferPartnerId,
     Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
@@ -1086,6 +1124,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       if (note != null) 'note': note,
       if (ledger != null) 'ledger': ledger,
       if (goalId != null) 'goal_id': goalId,
+      if (transferPartnerId != null) 'transfer_partner_id': transferPartnerId,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
@@ -1100,6 +1139,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       Value<String?>? note,
       Value<String>? ledger,
       Value<int?>? goalId,
+      Value<int?>? transferPartnerId,
       Value<DateTime>? createdAt}) {
     return TransactionsCompanion(
       id: id ?? this.id,
@@ -1111,6 +1151,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
       note: note ?? this.note,
       ledger: ledger ?? this.ledger,
       goalId: goalId ?? this.goalId,
+      transferPartnerId: transferPartnerId ?? this.transferPartnerId,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -1145,6 +1186,9 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
     if (goalId.present) {
       map['goal_id'] = Variable<int>(goalId.value);
     }
+    if (transferPartnerId.present) {
+      map['transfer_partner_id'] = Variable<int>(transferPartnerId.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1163,6 +1207,7 @@ class TransactionsCompanion extends UpdateCompanion<Transaction> {
           ..write('note: $note, ')
           ..write('ledger: $ledger, ')
           ..write('goalId: $goalId, ')
+          ..write('transferPartnerId: $transferPartnerId, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -1198,6 +1243,14 @@ class $SavingGoalsTable extends SavingGoals
   late final GeneratedColumn<int> targetAmount = GeneratedColumn<int>(
       'target_amount', aliasedName, false,
       type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _currentAmountMeta =
+      const VerificationMeta('currentAmount');
+  @override
+  late final GeneratedColumn<int> currentAmount = GeneratedColumn<int>(
+      'current_amount', aliasedName, false,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultValue: const Constant(0));
   static const VerificationMeta _deadlineMeta =
       const VerificationMeta('deadline');
   @override
@@ -1218,9 +1271,14 @@ class $SavingGoalsTable extends SavingGoals
       requiredDuringInsert: true,
       defaultConstraints:
           GeneratedColumn.constraintIsAlways('REFERENCES wallets (id)'));
+  static const VerificationMeta _noteMeta = const VerificationMeta('note');
+  @override
+  late final GeneratedColumn<String> note = GeneratedColumn<String>(
+      'note', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   @override
   List<GeneratedColumn> get $columns =>
-      [id, name, targetAmount, deadline, icon, walletId];
+      [id, name, targetAmount, currentAmount, deadline, icon, walletId, note];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -1248,6 +1306,12 @@ class $SavingGoalsTable extends SavingGoals
     } else if (isInserting) {
       context.missing(_targetAmountMeta);
     }
+    if (data.containsKey('current_amount')) {
+      context.handle(
+          _currentAmountMeta,
+          currentAmount.isAcceptableOrUnknown(
+              data['current_amount']!, _currentAmountMeta));
+    }
     if (data.containsKey('deadline')) {
       context.handle(_deadlineMeta,
           deadline.isAcceptableOrUnknown(data['deadline']!, _deadlineMeta));
@@ -1261,6 +1325,10 @@ class $SavingGoalsTable extends SavingGoals
           walletId.isAcceptableOrUnknown(data['wallet_id']!, _walletIdMeta));
     } else if (isInserting) {
       context.missing(_walletIdMeta);
+    }
+    if (data.containsKey('note')) {
+      context.handle(
+          _noteMeta, note.isAcceptableOrUnknown(data['note']!, _noteMeta));
     }
     return context;
   }
@@ -1277,12 +1345,16 @@ class $SavingGoalsTable extends SavingGoals
           .read(DriftSqlType.string, data['${effectivePrefix}name'])!,
       targetAmount: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}target_amount'])!,
+      currentAmount: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}current_amount'])!,
       deadline: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}deadline']),
       icon: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}icon']),
       walletId: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}wallet_id'])!,
+      note: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}note']),
     );
   }
 
@@ -1296,22 +1368,27 @@ class SavingGoal extends DataClass implements Insertable<SavingGoal> {
   final int id;
   final String name;
   final int targetAmount;
+  final int currentAmount;
   final DateTime? deadline;
   final String? icon;
   final int walletId;
+  final String? note;
   const SavingGoal(
       {required this.id,
       required this.name,
       required this.targetAmount,
+      required this.currentAmount,
       this.deadline,
       this.icon,
-      required this.walletId});
+      required this.walletId,
+      this.note});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['name'] = Variable<String>(name);
     map['target_amount'] = Variable<int>(targetAmount);
+    map['current_amount'] = Variable<int>(currentAmount);
     if (!nullToAbsent || deadline != null) {
       map['deadline'] = Variable<DateTime>(deadline);
     }
@@ -1319,6 +1396,9 @@ class SavingGoal extends DataClass implements Insertable<SavingGoal> {
       map['icon'] = Variable<String>(icon);
     }
     map['wallet_id'] = Variable<int>(walletId);
+    if (!nullToAbsent || note != null) {
+      map['note'] = Variable<String>(note);
+    }
     return map;
   }
 
@@ -1327,11 +1407,13 @@ class SavingGoal extends DataClass implements Insertable<SavingGoal> {
       id: Value(id),
       name: Value(name),
       targetAmount: Value(targetAmount),
+      currentAmount: Value(currentAmount),
       deadline: deadline == null && nullToAbsent
           ? const Value.absent()
           : Value(deadline),
       icon: icon == null && nullToAbsent ? const Value.absent() : Value(icon),
       walletId: Value(walletId),
+      note: note == null && nullToAbsent ? const Value.absent() : Value(note),
     );
   }
 
@@ -1342,9 +1424,11 @@ class SavingGoal extends DataClass implements Insertable<SavingGoal> {
       id: serializer.fromJson<int>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       targetAmount: serializer.fromJson<int>(json['targetAmount']),
+      currentAmount: serializer.fromJson<int>(json['currentAmount']),
       deadline: serializer.fromJson<DateTime?>(json['deadline']),
       icon: serializer.fromJson<String?>(json['icon']),
       walletId: serializer.fromJson<int>(json['walletId']),
+      note: serializer.fromJson<String?>(json['note']),
     );
   }
   @override
@@ -1354,9 +1438,11 @@ class SavingGoal extends DataClass implements Insertable<SavingGoal> {
       'id': serializer.toJson<int>(id),
       'name': serializer.toJson<String>(name),
       'targetAmount': serializer.toJson<int>(targetAmount),
+      'currentAmount': serializer.toJson<int>(currentAmount),
       'deadline': serializer.toJson<DateTime?>(deadline),
       'icon': serializer.toJson<String?>(icon),
       'walletId': serializer.toJson<int>(walletId),
+      'note': serializer.toJson<String?>(note),
     };
   }
 
@@ -1364,16 +1450,20 @@ class SavingGoal extends DataClass implements Insertable<SavingGoal> {
           {int? id,
           String? name,
           int? targetAmount,
+          int? currentAmount,
           Value<DateTime?> deadline = const Value.absent(),
           Value<String?> icon = const Value.absent(),
-          int? walletId}) =>
+          int? walletId,
+          Value<String?> note = const Value.absent()}) =>
       SavingGoal(
         id: id ?? this.id,
         name: name ?? this.name,
         targetAmount: targetAmount ?? this.targetAmount,
+        currentAmount: currentAmount ?? this.currentAmount,
         deadline: deadline.present ? deadline.value : this.deadline,
         icon: icon.present ? icon.value : this.icon,
         walletId: walletId ?? this.walletId,
+        note: note.present ? note.value : this.note,
       );
   SavingGoal copyWithCompanion(SavingGoalsCompanion data) {
     return SavingGoal(
@@ -1382,9 +1472,13 @@ class SavingGoal extends DataClass implements Insertable<SavingGoal> {
       targetAmount: data.targetAmount.present
           ? data.targetAmount.value
           : this.targetAmount,
+      currentAmount: data.currentAmount.present
+          ? data.currentAmount.value
+          : this.currentAmount,
       deadline: data.deadline.present ? data.deadline.value : this.deadline,
       icon: data.icon.present ? data.icon.value : this.icon,
       walletId: data.walletId.present ? data.walletId.value : this.walletId,
+      note: data.note.present ? data.note.value : this.note,
     );
   }
 
@@ -1394,16 +1488,18 @@ class SavingGoal extends DataClass implements Insertable<SavingGoal> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('targetAmount: $targetAmount, ')
+          ..write('currentAmount: $currentAmount, ')
           ..write('deadline: $deadline, ')
           ..write('icon: $icon, ')
-          ..write('walletId: $walletId')
+          ..write('walletId: $walletId, ')
+          ..write('note: $note')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, name, targetAmount, deadline, icon, walletId);
+  int get hashCode => Object.hash(
+      id, name, targetAmount, currentAmount, deadline, icon, walletId, note);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1411,33 +1507,41 @@ class SavingGoal extends DataClass implements Insertable<SavingGoal> {
           other.id == this.id &&
           other.name == this.name &&
           other.targetAmount == this.targetAmount &&
+          other.currentAmount == this.currentAmount &&
           other.deadline == this.deadline &&
           other.icon == this.icon &&
-          other.walletId == this.walletId);
+          other.walletId == this.walletId &&
+          other.note == this.note);
 }
 
 class SavingGoalsCompanion extends UpdateCompanion<SavingGoal> {
   final Value<int> id;
   final Value<String> name;
   final Value<int> targetAmount;
+  final Value<int> currentAmount;
   final Value<DateTime?> deadline;
   final Value<String?> icon;
   final Value<int> walletId;
+  final Value<String?> note;
   const SavingGoalsCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.targetAmount = const Value.absent(),
+    this.currentAmount = const Value.absent(),
     this.deadline = const Value.absent(),
     this.icon = const Value.absent(),
     this.walletId = const Value.absent(),
+    this.note = const Value.absent(),
   });
   SavingGoalsCompanion.insert({
     this.id = const Value.absent(),
     required String name,
     required int targetAmount,
+    this.currentAmount = const Value.absent(),
     this.deadline = const Value.absent(),
     this.icon = const Value.absent(),
     required int walletId,
+    this.note = const Value.absent(),
   })  : name = Value(name),
         targetAmount = Value(targetAmount),
         walletId = Value(walletId);
@@ -1445,17 +1549,21 @@ class SavingGoalsCompanion extends UpdateCompanion<SavingGoal> {
     Expression<int>? id,
     Expression<String>? name,
     Expression<int>? targetAmount,
+    Expression<int>? currentAmount,
     Expression<DateTime>? deadline,
     Expression<String>? icon,
     Expression<int>? walletId,
+    Expression<String>? note,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (targetAmount != null) 'target_amount': targetAmount,
+      if (currentAmount != null) 'current_amount': currentAmount,
       if (deadline != null) 'deadline': deadline,
       if (icon != null) 'icon': icon,
       if (walletId != null) 'wallet_id': walletId,
+      if (note != null) 'note': note,
     });
   }
 
@@ -1463,16 +1571,20 @@ class SavingGoalsCompanion extends UpdateCompanion<SavingGoal> {
       {Value<int>? id,
       Value<String>? name,
       Value<int>? targetAmount,
+      Value<int>? currentAmount,
       Value<DateTime?>? deadline,
       Value<String?>? icon,
-      Value<int>? walletId}) {
+      Value<int>? walletId,
+      Value<String?>? note}) {
     return SavingGoalsCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
       targetAmount: targetAmount ?? this.targetAmount,
+      currentAmount: currentAmount ?? this.currentAmount,
       deadline: deadline ?? this.deadline,
       icon: icon ?? this.icon,
       walletId: walletId ?? this.walletId,
+      note: note ?? this.note,
     );
   }
 
@@ -1488,6 +1600,9 @@ class SavingGoalsCompanion extends UpdateCompanion<SavingGoal> {
     if (targetAmount.present) {
       map['target_amount'] = Variable<int>(targetAmount.value);
     }
+    if (currentAmount.present) {
+      map['current_amount'] = Variable<int>(currentAmount.value);
+    }
     if (deadline.present) {
       map['deadline'] = Variable<DateTime>(deadline.value);
     }
@@ -1496,6 +1611,9 @@ class SavingGoalsCompanion extends UpdateCompanion<SavingGoal> {
     }
     if (walletId.present) {
       map['wallet_id'] = Variable<int>(walletId.value);
+    }
+    if (note.present) {
+      map['note'] = Variable<String>(note.value);
     }
     return map;
   }
@@ -1506,9 +1624,11 @@ class SavingGoalsCompanion extends UpdateCompanion<SavingGoal> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('targetAmount: $targetAmount, ')
+          ..write('currentAmount: $currentAmount, ')
           ..write('deadline: $deadline, ')
           ..write('icon: $icon, ')
-          ..write('walletId: $walletId')
+          ..write('walletId: $walletId, ')
+          ..write('note: $note')
           ..write(')'))
         .toString();
   }
@@ -2134,6 +2254,7 @@ typedef $$TransactionsTableCreateCompanionBuilder = TransactionsCompanion
   Value<String?> note,
   Value<String> ledger,
   Value<int?> goalId,
+  Value<int?> transferPartnerId,
   Value<DateTime> createdAt,
 });
 typedef $$TransactionsTableUpdateCompanionBuilder = TransactionsCompanion
@@ -2147,6 +2268,7 @@ typedef $$TransactionsTableUpdateCompanionBuilder = TransactionsCompanion
   Value<String?> note,
   Value<String> ledger,
   Value<int?> goalId,
+  Value<int?> transferPartnerId,
   Value<DateTime> createdAt,
 });
 
@@ -2212,6 +2334,10 @@ class $$TransactionsTableFilterComposer
 
   ColumnFilters<int> get goalId => $composableBuilder(
       column: $table.goalId, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<int> get transferPartnerId => $composableBuilder(
+      column: $table.transferPartnerId,
+      builder: (column) => ColumnFilters(column));
 
   ColumnFilters<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
@@ -2287,6 +2413,10 @@ class $$TransactionsTableOrderingComposer
   ColumnOrderings<int> get goalId => $composableBuilder(
       column: $table.goalId, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<int> get transferPartnerId => $composableBuilder(
+      column: $table.transferPartnerId,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
 
@@ -2360,6 +2490,9 @@ class $$TransactionsTableAnnotationComposer
 
   GeneratedColumn<int> get goalId =>
       $composableBuilder(column: $table.goalId, builder: (column) => column);
+
+  GeneratedColumn<int> get transferPartnerId => $composableBuilder(
+      column: $table.transferPartnerId, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -2437,6 +2570,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<String?> note = const Value.absent(),
             Value<String> ledger = const Value.absent(),
             Value<int?> goalId = const Value.absent(),
+            Value<int?> transferPartnerId = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
           }) =>
               TransactionsCompanion(
@@ -2449,6 +2583,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             note: note,
             ledger: ledger,
             goalId: goalId,
+            transferPartnerId: transferPartnerId,
             createdAt: createdAt,
           ),
           createCompanionCallback: ({
@@ -2461,6 +2596,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             Value<String?> note = const Value.absent(),
             Value<String> ledger = const Value.absent(),
             Value<int?> goalId = const Value.absent(),
+            Value<int?> transferPartnerId = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
           }) =>
               TransactionsCompanion.insert(
@@ -2473,6 +2609,7 @@ class $$TransactionsTableTableManager extends RootTableManager<
             note: note,
             ledger: ledger,
             goalId: goalId,
+            transferPartnerId: transferPartnerId,
             createdAt: createdAt,
           ),
           withReferenceMapper: (p0) => p0
@@ -2546,18 +2683,22 @@ typedef $$SavingGoalsTableCreateCompanionBuilder = SavingGoalsCompanion
   Value<int> id,
   required String name,
   required int targetAmount,
+  Value<int> currentAmount,
   Value<DateTime?> deadline,
   Value<String?> icon,
   required int walletId,
+  Value<String?> note,
 });
 typedef $$SavingGoalsTableUpdateCompanionBuilder = SavingGoalsCompanion
     Function({
   Value<int> id,
   Value<String> name,
   Value<int> targetAmount,
+  Value<int> currentAmount,
   Value<DateTime?> deadline,
   Value<String?> icon,
   Value<int> walletId,
+  Value<String?> note,
 });
 
 final class $$SavingGoalsTableReferences
@@ -2597,11 +2738,17 @@ class $$SavingGoalsTableFilterComposer
   ColumnFilters<int> get targetAmount => $composableBuilder(
       column: $table.targetAmount, builder: (column) => ColumnFilters(column));
 
+  ColumnFilters<int> get currentAmount => $composableBuilder(
+      column: $table.currentAmount, builder: (column) => ColumnFilters(column));
+
   ColumnFilters<DateTime> get deadline => $composableBuilder(
       column: $table.deadline, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get icon => $composableBuilder(
       column: $table.icon, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get note => $composableBuilder(
+      column: $table.note, builder: (column) => ColumnFilters(column));
 
   $$WalletsTableFilterComposer get walletId {
     final $$WalletsTableFilterComposer composer = $composerBuilder(
@@ -2643,11 +2790,18 @@ class $$SavingGoalsTableOrderingComposer
       column: $table.targetAmount,
       builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<int> get currentAmount => $composableBuilder(
+      column: $table.currentAmount,
+      builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<DateTime> get deadline => $composableBuilder(
       column: $table.deadline, builder: (column) => ColumnOrderings(column));
 
   ColumnOrderings<String> get icon => $composableBuilder(
       column: $table.icon, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get note => $composableBuilder(
+      column: $table.note, builder: (column) => ColumnOrderings(column));
 
   $$WalletsTableOrderingComposer get walletId {
     final $$WalletsTableOrderingComposer composer = $composerBuilder(
@@ -2688,11 +2842,17 @@ class $$SavingGoalsTableAnnotationComposer
   GeneratedColumn<int> get targetAmount => $composableBuilder(
       column: $table.targetAmount, builder: (column) => column);
 
+  GeneratedColumn<int> get currentAmount => $composableBuilder(
+      column: $table.currentAmount, builder: (column) => column);
+
   GeneratedColumn<DateTime> get deadline =>
       $composableBuilder(column: $table.deadline, builder: (column) => column);
 
   GeneratedColumn<String> get icon =>
       $composableBuilder(column: $table.icon, builder: (column) => column);
+
+  GeneratedColumn<String> get note =>
+      $composableBuilder(column: $table.note, builder: (column) => column);
 
   $$WalletsTableAnnotationComposer get walletId {
     final $$WalletsTableAnnotationComposer composer = $composerBuilder(
@@ -2741,33 +2901,41 @@ class $$SavingGoalsTableTableManager extends RootTableManager<
             Value<int> id = const Value.absent(),
             Value<String> name = const Value.absent(),
             Value<int> targetAmount = const Value.absent(),
+            Value<int> currentAmount = const Value.absent(),
             Value<DateTime?> deadline = const Value.absent(),
             Value<String?> icon = const Value.absent(),
             Value<int> walletId = const Value.absent(),
+            Value<String?> note = const Value.absent(),
           }) =>
               SavingGoalsCompanion(
             id: id,
             name: name,
             targetAmount: targetAmount,
+            currentAmount: currentAmount,
             deadline: deadline,
             icon: icon,
             walletId: walletId,
+            note: note,
           ),
           createCompanionCallback: ({
             Value<int> id = const Value.absent(),
             required String name,
             required int targetAmount,
+            Value<int> currentAmount = const Value.absent(),
             Value<DateTime?> deadline = const Value.absent(),
             Value<String?> icon = const Value.absent(),
             required int walletId,
+            Value<String?> note = const Value.absent(),
           }) =>
               SavingGoalsCompanion.insert(
             id: id,
             name: name,
             targetAmount: targetAmount,
+            currentAmount: currentAmount,
             deadline: deadline,
             icon: icon,
             walletId: walletId,
+            note: note,
           ),
           withReferenceMapper: (p0) => p0
               .map((e) => (

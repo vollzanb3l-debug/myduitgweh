@@ -10,13 +10,15 @@ class AppLabels {
   static const String duitSaya = 'Duit Saya';
 
   // 4 Jenis Duit
-  static const String duitHarian = 'Duit Harian';
+  static const String duitUtama = 'Duit Utama';
+  static const String duitHarian = 'Duit Utama'; // Alias kompatibilitas
   static const String duitSaldo = 'Duit Saldo';
   static const String duitTabungan = 'Duit Tabungan';
   static const String duitPencapaian = 'Duit Pencapaian';
 
   // Penjelasan Singkat
-  static const String descDuitHarian = 'Uang saku, makan, belanja, dan operasional sehari-hari';
+  static const String descDuitUtama = 'Uang saku, makan, belanja, dan operasional sehari-hari';
+  static const String descDuitHarian = descDuitUtama; // Alias kompatibilitas
   static const String descDuitSaldo = 'Kas tunai, rekening bank, dan dompet digital (e-wallet)';
   static const String descDuitTabungan = 'Simpanan masa depan, dana darurat, dan cadangan';
   static const String descDuitPencapaian = 'Target impian dan barang idaman yang ingin dicapai';
@@ -50,14 +52,14 @@ class AppLabels {
   static const String saldoDireset = 'Saldo berhasil direset';
   static const String progresDireset = 'Progres pencapaian berhasil direset';
 
-  /// Mengembalikan nama pendek jenis duit (Harian, Saldo, Tabungan, Pencapaian, Semua)
+  /// Mengembalikan nama pendek jenis duit (Utama, Saldo, Tabungan, Pencapaian, Semua)
   static String duitShortName(dynamic duit) => getDuitShortName(duit);
 
   /// Mengembalikan label merek: MyDuitGweh (NamaDuit)
   static String brandLabel(dynamic duit) => getBrandLabel(duit);
 }
 
-/// Fungsi pembantu untuk mendapatkan nama pendek duit (Harian, Saldo, Tabungan, Pencapaian, Semua)
+/// Fungsi pembantu untuk mendapatkan nama pendek duit (Utama, Saldo, Tabungan, Pencapaian, Semua)
 String duitShortName(dynamic duit) => getDuitShortName(duit);
 
 /// Fungsi pembantu untuk mendapatkan label merek: MyDuitGweh (NamaDuit)
@@ -67,7 +69,7 @@ String brandLabel(dynamic duit) => getBrandLabel(duit);
 String getDuitShortName(dynamic duit) {
   if (duit == null) return 'Semua';
   final str = duit.toString().toLowerCase();
-  if (str.contains('harian') || str.contains('daily')) return 'Harian';
+  if (str.contains('utama') || str.contains('harian') || str.contains('daily')) return 'Utama';
   if (str.contains('saldo') || str.contains('balance')) return 'Saldo';
   if (str.contains('tabungan') || str.contains('saving')) return 'Tabungan';
   if (str.contains('pencapaian') || str.contains('goal')) return 'Pencapaian';

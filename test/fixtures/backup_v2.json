@@ -1,0 +1,76 @@
+{
+  "appName": "MyDuitGweh",
+  "backupVersion": 2,
+  "appVersion": "1.0.0",
+  "createdAt": "2026-10-28T07:00:00.000Z",
+  "preferences": {
+    "userName": "Rafi Pratama",
+    "themeMode": "system",
+    "activeDuitKey": "utama",
+    "isBalanceHidden": false,
+    "historyFilter": "daily",
+    "hideBalance": {
+      "utama": false,
+      "saldo": false,
+      "tabungan": false,
+      "pencapaian": false,
+      "semua": false
+    }
+  },
+  "wallets": [
+    {
+      "id": 1,
+      "name": "Uang Utama",
+      "type": "daily",
+      "initialBalance": 100000,
+      "createdAt": "2026-10-01T08:00:00.000Z"
+    },
+    {
+      "id": 2,
+      "name": "Tunai",
+      "type": "balance",
+      "initialBalance": 250000,
+      "createdAt": "2026-10-01T08:00:00.000Z"
+    }
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "Makan & Minum",
+      "icon": "restaurant_rounded",
+      "colorHex": "#EF4444",
+      "type": "expense"
+    },
+    {
+      "id": 2,
+      "name": "Gaji Pokok",
+      "icon": "payments_rounded",
+      "colorHex": "#10B981",
+      "type": "income"
+    }
+  ],
+  "savingGoals": [
+    {
+      "id": 1,
+      "name": "Beli Sepeda",
+      "targetAmount": 3000000,
+      "currentAmount": 500000,
+      "deadline": "2026-12-31T00:00:00.000Z",
+      "icon": "two_wheeler_rounded",
+      "walletId": 5
+    }
+  ],
+  "transactions": [
+    {
+      "id": 1,
+      "walletId": 1,
+      "categoryId": 1,
+      "amount": 25000,
+      "type": "expense",
+      "date": "2026-10-15T12:30:00.000Z",
+      "ledger": "daily",
+      "note": "Makan siang ayam geprek",
+      "createdAt": "2026-10-15T12:30:00.000Z"
+    }
+  ]
+}

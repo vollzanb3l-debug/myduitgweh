@@ -57,8 +57,8 @@ void main() {
         ),
       );
 
-      // Slide 1: Duit Harian
-      expect(find.text('Duit Harian'), findsOneWidget);
+      // Slide 1: Duit Utama
+      expect(find.text('Duit Utama'), findsOneWidget);
       expect(find.text('Lewati'), findsOneWidget);
 
       // Swipe to slide 2: Duit Saldo

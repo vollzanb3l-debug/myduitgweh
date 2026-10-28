@@ -10,6 +10,11 @@ import 'saving_goal_repository.dart';
 import 'transaction_repository.dart';
 import 'wallet_repository.dart';
 
+import 'drift_category_repository.dart';
+import 'drift_saving_goal_repository.dart';
+import 'drift_transaction_repository.dart';
+import 'drift_wallet_repository.dart';
+
 // Database Provider
 final appDatabaseProvider = Provider<AppDatabase>((ref) {
   final db = AppDatabase();
@@ -19,34 +24,31 @@ final appDatabaseProvider = Provider<AppDatabase>((ref) {
 
 // Provider Repository
 final walletRepositoryProvider = Provider<WalletRepository>((ref) {
-  final repo = InMemoryWalletRepository(seedInitialData: true);
-  ref.onDispose(() => repo.dispose());
-  return repo;
+  final db = ref.watch(appDatabaseProvider);
+  return DriftWalletRepository(db);
 });
 
 final categoryRepositoryProvider = Provider<CategoryRepository>((ref) {
-  final repo = InMemoryCategoryRepository(seedInitialData: true);
-  ref.onDispose(() => repo.dispose());
-  return repo;
+  final db = ref.watch(appDatabaseProvider);
+  return DriftCategoryRepository(db);
 });
 
 final savingGoalRepositoryProvider = Provider<SavingGoalRepository>((ref) {
-  final repo = InMemorySavingGoalRepository(seedInitialData: false);
-  ref.onDispose(() => repo.dispose());
-  return repo;
+  final db = ref.watch(appDatabaseProvider);
+  return DriftSavingGoalRepository(db);
 });
 
 final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
+  final db = ref.watch(appDatabaseProvider);
   final walletRepo = ref.watch(walletRepositoryProvider);
   final goalRepo = ref.watch(savingGoalRepositoryProvider);
   final categoryRepo = ref.watch(categoryRepositoryProvider);
-  final repo = InMemoryTransactionRepository(
+  return DriftTransactionRepository(
+    db,
     walletRepository: walletRepo,
     savingGoalRepository: goalRepo,
     categoryRepository: categoryRepo,
   );
-  ref.onDispose(() => repo.dispose());
-  return repo;
 });
 
 // Filter Catatan Aktif ('all', 'daily', 'balance', 'saving', 'goal')

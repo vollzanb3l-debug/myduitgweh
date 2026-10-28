@@ -18,7 +18,7 @@ class _OnboardingGuideScreenState extends State<OnboardingGuideScreen> {
 
   final List<Map<String, dynamic>> _pages = [
     {
-      'title': 'Duit Harian',
+      'title': 'Duit Utama',
       'desc':
           'Kelola uang masuk dan keluar sehari-hari dengan cepat tanpa ribet. Pengeluaran jajan, makan, hingga transport tercatat rapi.',
       'icon': Icons.today_rounded,

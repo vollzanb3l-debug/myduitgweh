@@ -47,7 +47,7 @@ class DuitSelection {
   String get chipLabel {
     switch (type) {
       case DuitType.harian:
-        return 'Harian';
+        return 'Utama';
       case DuitType.saldo:
         return 'Saldo';
       case DuitType.tabungan:
@@ -112,6 +112,7 @@ class DuitSelection {
       return DuitSelection.semua;
     }
     switch (key.toLowerCase()) {
+      case 'utama':
       case 'harian':
       case 'daily':
         return DuitSelection.harian;

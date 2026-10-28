@@ -80,7 +80,7 @@ class WalletsScreen extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Saldo Uang Harian',
+                      'Saldo Duit Utama',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 12,
                         color: isDark
@@ -90,6 +90,7 @@ class WalletsScreen extends ConsumerWidget {
                     ),
                     MoneyText(
                       amount: bal,
+                      duit: 'utama',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
@@ -135,6 +136,7 @@ class WalletsScreen extends ConsumerWidget {
                       balanceBalAsync.when(
                         data: (bal) => MoneyText(
                           amount: bal,
+                          duit: 'saldo',
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
@@ -202,6 +204,7 @@ class WalletsScreen extends ConsumerWidget {
                     ),
                     MoneyText(
                       amount: bal,
+                      duit: 'tabungan',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
@@ -259,6 +262,7 @@ class WalletsScreen extends ConsumerWidget {
                             children: [
                               MoneyText(
                                 amount: totalCurrent,
+                                duit: 'pencapaian',
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w700,
@@ -371,7 +375,7 @@ class WalletsScreen extends ConsumerWidget {
                               ),
                             ),
                           ),
-                          if (isActive)
+                          if (isActive) ...[
                             Container(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 8,
@@ -404,6 +408,29 @@ class WalletsScreen extends ConsumerWidget {
                                 ],
                               ),
                             ),
+                            const SizedBox(width: 6),
+                          ],
+                          IconButton(
+                            icon: Icon(
+                              ref.watch(isDuitHiddenProvider(normalizeDuitKey(thisDuit)))
+                                  ? Icons.visibility_off_rounded
+                                  : Icons.visibility_rounded,
+                              size: 19,
+                              color: isDark
+                                  ? AppColors.darkTextSecondary
+                                  : AppColors.lightTextSecondary,
+                            ),
+                            tooltip: ref.watch(isDuitHiddenProvider(normalizeDuitKey(thisDuit)))
+                                ? 'Tampilkan Saldo'
+                                : 'Sembunyikan Saldo',
+                            padding: const EdgeInsets.all(4),
+                            constraints: const BoxConstraints(),
+                            onPressed: () {
+                              ref
+                                  .read(duitHideBalanceProvider.notifier)
+                                  .toggle(normalizeDuitKey(thisDuit));
+                            },
+                          ),
                         ],
                       ),
                       const SizedBox(height: 2),

@@ -13,6 +13,7 @@ class MoneyText extends ConsumerWidget {
   final String prefix;
   final bool forceShow;
   final Alignment alignment;
+  final dynamic duit;
 
   const MoneyText({
     super.key,
@@ -21,6 +22,7 @@ class MoneyText extends ConsumerWidget {
     this.prefix = '',
     this.forceShow = false,
     this.alignment = Alignment.centerLeft,
+    this.duit,
   });
 
   /// Teks sensor default saat saldo disembunyikan
@@ -28,7 +30,13 @@ class MoneyText extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isHidden = ref.watch(hideBalanceProvider);
+    final bool isHidden;
+    if (duit != null) {
+      final key = normalizeDuitKey(duit);
+      isHidden = ref.watch(isDuitHiddenProvider(key));
+    } else {
+      isHidden = ref.watch(hideBalanceProvider);
+    }
 
     if (isHidden && !forceShow) {
       return FittedBox(

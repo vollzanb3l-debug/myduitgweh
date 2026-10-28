@@ -9,7 +9,7 @@ class AboutText {
 
   static const String appDescription =
       'MyDuitGweh adalah aplikasi pencatat keuangan offline yang ramah dan mudah digunakan. '
-      'Kelola Duit Harian, Duit Saldo, Duit Tabungan, dan wujudkan Duit Pencapaian target impianmu tanpa ribet.';
+      'Kelola Duit Utama, Duit Saldo, Duit Tabungan, dan wujudkan Duit Pencapaian target impianmu tanpa ribet.';
 
   // Bagian Tentang Pembuat
   static const String authorName = 'Vollzanbel';

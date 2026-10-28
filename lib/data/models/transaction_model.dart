@@ -8,6 +8,7 @@ class TransactionItem {
   final String? note;
   final String ledger; // 'daily', 'balance', 'saving', 'goal'
   final int? goalId; // opsional: id target impian jika terkait pencapaian
+  final int? transferPartnerId; // opsional: id transaksi pasangan jika merupakan transfer antar akun
   final DateTime createdAt;
 
   const TransactionItem({
@@ -20,6 +21,7 @@ class TransactionItem {
     this.note,
     this.ledger = 'daily',
     this.goalId,
+    this.transferPartnerId,
     required this.createdAt,
   });
 
@@ -33,6 +35,7 @@ class TransactionItem {
     String? note,
     String? ledger,
     int? goalId,
+    int? transferPartnerId,
     DateTime? createdAt,
   }) {
     return TransactionItem(
@@ -45,6 +48,7 @@ class TransactionItem {
       note: note ?? this.note,
       ledger: ledger ?? this.ledger,
       goalId: goalId ?? this.goalId,
+      transferPartnerId: transferPartnerId ?? this.transferPartnerId,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -60,6 +64,7 @@ class TransactionItem {
       'note': note,
       'ledger': ledger,
       if (goalId != null) 'goal_id': goalId,
+      if (transferPartnerId != null) 'transfer_partner_id': transferPartnerId,
       'created_at': createdAt.toIso8601String(),
     };
   }
@@ -69,12 +74,13 @@ class TransactionItem {
       id: map['id'] as int?,
       type: map['type'] as String,
       amount: (map['amount'] as num).toInt(),
-      categoryId: map['category_id'] as int,
-      walletId: map['wallet_id'] as int,
+      categoryId: (map['category_id'] ?? map['categoryId']) as int,
+      walletId: (map['wallet_id'] ?? map['walletId']) as int,
       date: DateTime.parse(map['date'] as String),
       note: map['note'] as String?,
       ledger: (map['ledger'] as String?) ?? 'daily',
-      goalId: map['goal_id'] as int?,
+      goalId: (map['goal_id'] ?? map['goalId']) as int?,
+      transferPartnerId: (map['transfer_partner_id'] ?? map['transferPartnerId']) as int?,
       createdAt: DateTime.parse(map['created_at'] as String),
     );
   }

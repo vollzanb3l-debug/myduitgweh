@@ -381,7 +381,7 @@ class HomeScreen extends ConsumerWidget {
   ) {
     String balanceTitle;
     if (activeDuit.isHarian) {
-      balanceTitle = 'Saldo Duit Harian';
+      balanceTitle = 'Saldo Duit Utama';
     } else if (activeDuit.isSaldo) {
       balanceTitle = 'Total Saldo Simpanan';
     } else if (activeDuit.isTabungan) {

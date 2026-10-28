@@ -5,7 +5,7 @@ Aplikasi pencatat keuangan pribadi untuk Android yang berjalan secara offline.
 ---
 
 ## TUJUAN
-Mencatat pemasukan dan pengeluaran harian, mengelola dompet (Uang Harian, Saldo, Tabungan), serta melihat statistik dengan grafik interaktif.
+Mencatat pemasukan dan pengeluaran harian, mengelola dompet (Uang Utama, Saldo, Tabungan), serta melihat statistik dengan grafik interaktif.
 
 ---
 
@@ -90,3 +90,4 @@ Terinspirasi dari nuansa platform donasi kreator Indonesia yang hangat, ramah, d
 11. Dialog tanpa opsi tidak menampilkan dropdown (tampilkan label biasa jika hanya 1 opsi).
 12. Alur PIN memiliki 2 pertanyaan pemulihan & konfirmasi hapus data ketik "HAPUS" untuk Reset Total.
 13. ATURAN FORMAT CADANGAN (BACKUP): Setiap kali struktur data berubah (menambah, menghapus, atau mengganti kolom), `backupVersion` di `core/constants/backup_constants.dart` wajib dinaikkan (+1) dan fungsi migrasinya ditambahkan di `BackupService` agar berkas cadangan versi lama selalu aman dipulihkan. Simpan 1 contoh berkas cadangan per versi di folder `test/fixtures/` untuk uji ketahanan.
+14. Label tampilan untuk buku kas pertama adalah "Utama" (Duit Utama / Saldo Duit Utama), menggantikan nama sebelumnya ("Harian"). Kunci internal data tetap 'daily' demi kompatibilitas database dan cadangan.

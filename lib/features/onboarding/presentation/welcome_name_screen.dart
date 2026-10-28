@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/constants/app_colors.dart';
 import '../../../core/providers/app_state_provider.dart';
+import '../../../core/services/backup_service.dart';
 import '../../../core/widgets/widgets.dart';
 
 class WelcomeNameScreen extends ConsumerStatefulWidget {
@@ -38,6 +39,143 @@ class _WelcomeNameScreenState extends ConsumerState<WelcomeNameScreen> {
 
     if (mounted) {
       context.go('/pilihan-pin');
+    }
+  }
+
+  Future<void> _handleRestoreOldData() async {
+    final proceed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Pulihkan Data Lama',
+          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+        ),
+        content: Text(
+          'Data cadangan (.json) Anda akan dipulihkan. Nama pengguna dan semua catatan akan dikembalikan.',
+          style: GoogleFonts.plusJakartaSans(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Pilih File'),
+          ),
+        ],
+      ),
+    );
+
+    if (proceed != true || !mounted) return;
+
+    final backup = BackupService.fromRef(ref);
+    final jsonContent = await backup.pickBackupFile();
+    if (jsonContent == null) return;
+
+    final prelimError = backup.validateBackupPrelim(jsonContent);
+    if (prelimError != null) {
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Text('Berkas Tidak Sesuai'),
+            content: Text(
+              prelimError,
+              style: GoogleFonts.plusJakartaSans(fontSize: 14),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Mengerti'),
+              ),
+            ],
+          ),
+        );
+      }
+      return;
+    }
+
+    final result = await backup.restoreBackup(jsonContent);
+    if (!mounted) return;
+
+    if (result.success) {
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              const Icon(Icons.check_circle_rounded, color: AppColors.income),
+              const SizedBox(width: 8),
+              Text(
+                'Pemulihan Berhasil',
+                style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Data berhasil dipulihkan dari berkas cadangan:',
+                style: GoogleFonts.plusJakartaSans(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 10),
+              Text('• ${result.restoredTransactions} Transaksi'),
+              Text('• ${result.restoredWallets} Akun Dompet'),
+              Text('• ${result.restoredGoals} Target Impian'),
+              Text('• ${result.restoredCategories} Kategori'),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Selesai'),
+            ),
+          ],
+        ),
+      );
+
+      if (!mounted) return;
+
+      if (result.userName != null && result.userName!.trim().isNotEmpty) {
+        final name = result.userName!.trim();
+        await ref.read(userNameProvider.notifier).updateName(name);
+        if (mounted) {
+          context.go('/pilihan-pin');
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Data berhasil dipulihkan. Silakan isi nama panggilan Anda untuk melanjutkan.',
+              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
+            ),
+            backgroundColor: AppColors.darkAccent,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.message.isNotEmpty
+                ? result.message
+                : 'Gagal memulihkan cadangan. Pastikan berkas cadangan valid.',
+            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: AppColors.expense,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -138,6 +276,23 @@ class _WelcomeNameScreenState extends ConsumerState<WelcomeNameScreen> {
               PrimaryButton(
                 text: 'Lanjut',
                 onPressed: _submitName,
+              ),
+
+              const SizedBox(height: 16),
+
+              Center(
+                child: TextButton.icon(
+                  onPressed: _handleRestoreOldData,
+                  icon: const Icon(Icons.restore_rounded, size: 18),
+                  label: Text(
+                    'Pernah memakai MyDuitGweh? Pulihkan data lama',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
               ),
             ],
           ),

@@ -238,6 +238,7 @@ Future<void> _showTambahSaldoDialog(
     builder: (ctx) {
       return StatefulBuilder(
         builder: (ctx, setState) {
+          final isDark = Theme.of(ctx).brightness == Brightness.dark;
           return AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             title: Text(
@@ -264,14 +265,20 @@ Future<void> _showTambahSaldoDialog(
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF2ECE1),
+                          color: isDark ? AppColors.darkCard : const Color(0xFFF2ECE1),
                           borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                          ),
                         ),
                         child: Text(
                           wallets.first.name,
                           style: GoogleFonts.plusJakartaSans(
                             fontWeight: FontWeight.w600,
                             fontSize: 14,
+                            color: isDark
+                                ? AppColors.darkTextPrimary
+                                : AppColors.lightTextPrimary,
                           ),
                         ),
                       )
@@ -399,6 +406,7 @@ Future<void> _showKoreksiSaldoDialog(
     builder: (ctx) {
       return StatefulBuilder(
         builder: (ctx, setState) {
+          final isDark = Theme.of(ctx).brightness == Brightness.dark;
           final enteredActual = CurrencyInputFormatter.parseRupiah(actualController.text);
           final diff = enteredActual - currentBalance;
 
@@ -425,14 +433,20 @@ Future<void> _showKoreksiSaldoDialog(
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF2ECE1),
+                          color: isDark ? AppColors.darkCard : const Color(0xFFF2ECE1),
                           borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                          ),
                         ),
                         child: Text(
                           wallets.first.name,
                           style: GoogleFonts.plusJakartaSans(
                             fontWeight: FontWeight.w600,
                             fontSize: 14,
+                            color: isDark
+                                ? AppColors.darkTextPrimary
+                                : AppColors.lightTextPrimary,
                           ),
                         ),
                       )
@@ -845,6 +859,7 @@ Future<void> _showResetGoalProgressDialog(BuildContext context, WidgetRef ref) a
     builder: (ctx) {
       return StatefulBuilder(
         builder: (ctx, setState) {
+          final isDark = Theme.of(ctx).brightness == Brightness.dark;
           return AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             title: Text(
@@ -865,14 +880,20 @@ Future<void> _showResetGoalProgressDialog(BuildContext context, WidgetRef ref) a
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF2ECE1),
+                      color: isDark ? AppColors.darkCard : const Color(0xFFF2ECE1),
                       borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                      ),
                     ),
                     child: Text(
                       '${goals.first.name} (${formatRupiah(goals.first.currentAmount)})',
                       style: GoogleFonts.plusJakartaSans(
                         fontWeight: FontWeight.w600,
                         fontSize: 14,
+                        color: isDark
+                            ? AppColors.darkTextPrimary
+                            : AppColors.lightTextPrimary,
                       ),
                     ),
                   )

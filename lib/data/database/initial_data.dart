@@ -8,7 +8,7 @@ class InitialData {
   static List<WalletItem> get defaultWallets => [
     WalletItem(
       id: 1,
-      name: 'Uang Harian',
+      name: 'Uang Utama',
       type: 'daily',
       ledger: 'daily',
       initialBalance: 0,

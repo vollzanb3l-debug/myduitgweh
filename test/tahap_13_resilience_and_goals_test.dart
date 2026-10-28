@@ -56,14 +56,14 @@ void main() {
 
     test('(3) Label merek dan nama pendek duit di app_labels.dart', () {
       // brandLabel & duitShortName untuk setiap jenis DuitType
-      expect(brandLabel(DuitType.harian), equals('MyDuitGweh (Harian)'));
+      expect(brandLabel(DuitType.harian), equals('MyDuitGweh (Utama)'));
       expect(brandLabel(DuitType.saldo), equals('MyDuitGweh (Saldo)'));
       expect(brandLabel(DuitType.tabungan), equals('MyDuitGweh (Tabungan)'));
       expect(brandLabel(DuitType.pencapaian), equals('MyDuitGweh (Pencapaian)'));
       expect(brandLabel('semua'), equals('MyDuitGweh (Semua)'));
       expect(brandLabel(null), equals('MyDuitGweh (Semua)'));
 
-      expect(duitShortName(DuitType.harian), equals('Harian'));
+      expect(duitShortName(DuitType.harian), equals('Utama'));
       expect(duitShortName(DuitType.saldo), equals('Saldo'));
       expect(duitShortName(DuitType.tabungan), equals('Tabungan'));
       expect(duitShortName(DuitType.pencapaian), equals('Pencapaian'));

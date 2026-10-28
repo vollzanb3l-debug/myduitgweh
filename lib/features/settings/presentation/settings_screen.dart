@@ -74,6 +74,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     });
                     return;
                   }
+                  if (newName.length > 20) {
+                    setModalState(() {
+                      errorText = 'Nama maksimal 20 karakter ya';
+                    });
+                    return;
+                  }
 
                   await ref.read(userNameProvider.notifier).updateName(newName);
                   if (ctx.mounted) {
@@ -562,6 +568,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 8),
           AppCard(
             padding: const EdgeInsets.all(16),
+            onTap: () => _showChangeNameDialog(userName),
             child: Row(
               children: [
                 Container(
@@ -571,11 +578,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     shape: BoxShape.circle,
                     color: AppColors.primary.withValues(alpha: 0.15),
                   ),
-                  child: const Icon(
-                    Icons.person_rounded,
-                    color: AppColors.primary,
-                    size: 26,
-                  ),
+                  alignment: Alignment.center,
+                  child: userName.isNotEmpty
+                      ? Text(
+                          userName.trim()[0].toUpperCase(),
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primary,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.person_rounded,
+                          color: AppColors.primary,
+                          size: 26,
+                        ),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -583,7 +600,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        userName.isNotEmpty ? userName : 'Belum diatur',
+                        userName.isNotEmpty ? userName : 'Belum diisi',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.plusJakartaSans(
@@ -606,15 +623,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ],
                   ),
                 ),
-                OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                  ),
+                IconButton(
+                  icon: const Icon(Icons.edit_rounded, size: 20),
+                  tooltip: 'Ubah Nama',
                   onPressed: () => _showChangeNameDialog(userName),
-                  child: const Text('Ubah'),
                 ),
               ],
             ),
@@ -832,44 +844,43 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         const SizedBox(height: 8),
         AppCard(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: SwitchListTile(
-            contentPadding: EdgeInsets.zero,
-            secondary: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(10),
+          child: Column(
+            children: [
+              _buildPrivacyTile(
+                title: 'Duit Utama',
+                duitKey: 'utama',
+                icon: Icons.shopping_basket_rounded,
+                color: AppColors.duitHarian,
               ),
-              child: Icon(
-                ref.watch(hideBalanceProvider)
-                    ? Icons.visibility_off_rounded
-                    : Icons.visibility_rounded,
+              const Divider(height: 1),
+              _buildPrivacyTile(
+                title: 'Duit Saldo',
+                duitKey: 'saldo',
+                icon: Icons.account_balance_wallet_rounded,
+                color: AppColors.duitSaldo,
+              ),
+              const Divider(height: 1),
+              _buildPrivacyTile(
+                title: 'Duit Tabungan',
+                duitKey: 'tabungan',
+                icon: Icons.savings_rounded,
+                color: AppColors.duitTabungan,
+              ),
+              const Divider(height: 1),
+              _buildPrivacyTile(
+                title: 'Duit Pencapaian',
+                duitKey: 'pencapaian',
+                icon: Icons.stars_rounded,
+                color: AppColors.duitPencapaian,
+              ),
+              const Divider(height: 1),
+              _buildPrivacyTile(
+                title: 'Saldo Total (Semua)',
+                duitKey: 'semua',
+                icon: Icons.dashboard_rounded,
                 color: AppColors.primary,
-                size: 20,
               ),
-            ),
-            title: Text(
-              'Sembunyikan Saldo',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            subtitle: Text(
-              ref.watch(hideBalanceProvider)
-                  ? 'Semua nominal disembunyikan (Rp ••••••)'
-                  : 'Nominal saldo dan transaksi ditampilkan',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 12,
-                color: isDark
-                    ? AppColors.darkTextSecondary
-                    : AppColors.lightTextSecondary,
-              ),
-            ),
-            value: ref.watch(hideBalanceProvider),
-            onChanged: (val) async {
-              await ref.read(hideBalanceProvider.notifier).setHidden(val);
-            },
+            ],
           ),
         ),
 
@@ -1125,6 +1136,52 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           : null,
       onTap: () {
         ref.read(themeModeProvider.notifier).setThemeMode(modeValue);
+      },
+    );
+  }
+
+  Widget _buildPrivacyTile({
+    required String title,
+    required String duitKey,
+    required IconData icon,
+    required Color color,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isHidden = ref.watch(isDuitHiddenProvider(duitKey));
+
+    return SwitchListTile(
+      contentPadding: EdgeInsets.zero,
+      secondary: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(
+          isHidden ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+          color: color,
+          size: 20,
+        ),
+      ),
+      title: Text(
+        title,
+        style: GoogleFonts.plusJakartaSans(
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      subtitle: Text(
+        isHidden ? 'Rp ••••••' : 'Nominal ditampilkan',
+        style: GoogleFonts.plusJakartaSans(
+          fontSize: 12,
+          color: isDark
+              ? AppColors.darkTextSecondary
+              : AppColors.lightTextSecondary,
+        ),
+      ),
+      value: isHidden,
+      onChanged: (val) async {
+        await ref.read(duitHideBalanceProvider.notifier).setHidden(duitKey, val);
       },
     );
   }

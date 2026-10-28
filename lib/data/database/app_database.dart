@@ -15,7 +15,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -43,6 +43,17 @@ class AppDatabase extends _$AppDatabase {
         );
         await customStatement(
           "UPDATE wallets SET name = 'E-Wallet' WHERE name LIKE '%GoPay%' OR name LIKE '%OVO%' OR name LIKE '%Dana%'",
+        );
+      }
+      if (from < 5) {
+        // Tahap 15: Tambah kolom currentAmount dan note di savingGoals, transferPartnerId di transactions
+        await m.addColumn(savingGoals, savingGoals.currentAmount);
+        await m.addColumn(savingGoals, savingGoals.note);
+        await m.addColumn(transactions, transactions.transferPartnerId);
+
+        // Migrasi nama dompet bawaan "Uang Harian" -> "Uang Utama" jika belum diubah
+        await customStatement(
+          "UPDATE wallets SET name = 'Uang Utama' WHERE name = 'Uang Harian'",
         );
       }
     },

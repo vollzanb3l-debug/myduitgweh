@@ -11,10 +11,111 @@ import '../../../core/utils/formatters.dart';
 import '../../../core/utils/icon_helper.dart';
 import '../../../core/widgets/atur_saldo_sheet.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../../data/models/transaction_model.dart';
 import '../../../data/repositories/providers.dart';
 
 class DailyLedgerScreen extends ConsumerWidget {
   const DailyLedgerScreen({super.key});
+
+  Future<bool?> _showDeleteConfirmation(
+    BuildContext context,
+    TransactionItem item,
+  ) async {
+    final isTransfer = item.transferPartnerId != null ||
+        (item.note != null &&
+            (item.note!.startsWith('Transfer') ||
+                item.note!.contains('Transfer') ||
+                item.note!.startsWith('Dari ') ||
+                item.note!.startsWith('Ke ')));
+
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Hapus Transaksi?',
+          style: GoogleFonts.plusJakartaSans(
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Hapus transaksi ini? Saldo akan dihitung ulang.',
+              style: GoogleFonts.plusJakartaSans(fontSize: 14),
+            ),
+            if (isTransfer) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Transaksi ini terhubung dengan transfer. Kedua transaksi akan dihapus.',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.expense,
+                ),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(
+              'Batal',
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.w600,
+                color: AppColors.lightTextSecondary,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE57373),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              'Hapus',
+              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleDeleteTransaction(
+    BuildContext context,
+    WidgetRef ref,
+    TransactionItem item,
+  ) async {
+    final confirmed = await _showDeleteConfirmation(context, item);
+    if (confirmed == true && context.mounted) {
+      final repo = ref.read(transactionRepositoryProvider);
+      await repo.deleteTransaction(item.id!);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Transaksi dihapus',
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            backgroundColor: AppColors.darkAccent,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -90,7 +191,7 @@ class DailyLedgerScreen extends ConsumerWidget {
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              'Saldo Duit Harian',
+                              'Saldo Duit Utama',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.plusJakartaSans(
@@ -104,7 +205,7 @@ class DailyLedgerScreen extends ConsumerWidget {
                           ),
                           IconButton(
                             icon: Icon(
-                              ref.watch(hideBalanceProvider)
+                              ref.watch(isDuitHiddenProvider('utama'))
                                   ? Icons.visibility_off_rounded
                                   : Icons.visibility_rounded,
                               size: 18,
@@ -112,13 +213,13 @@ class DailyLedgerScreen extends ConsumerWidget {
                                   ? AppColors.darkTextSecondary
                                   : AppColors.lightTextSecondary,
                             ),
-                            tooltip: ref.watch(hideBalanceProvider)
+                            tooltip: ref.watch(isDuitHiddenProvider('utama'))
                                 ? 'Tampilkan Saldo'
                                 : 'Sembunyikan Saldo',
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                             onPressed: () =>
-                                ref.read(hideBalanceProvider.notifier).toggle(),
+                                ref.read(duitHideBalanceProvider.notifier).toggle('utama'),
                           ),
                           const SizedBox(width: 8),
                           OutlinedButton.icon(
@@ -156,6 +257,7 @@ class DailyLedgerScreen extends ConsumerWidget {
                         child: balanceAsync.when(
                           data: (bal) => AnimatedRupiahCounter(
                             amount: bal,
+                            duit: 'utama',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 26,
                               fontWeight: FontWeight.w800,
@@ -220,15 +322,15 @@ class DailyLedgerScreen extends ConsumerWidget {
                                                   : AppColors.lightTextSecondary,
                                             ),
                                           ),
-                                          Text(
-                                            formatRupiah(inc),
+                                          MoneyText(
+                                            amount: inc,
+                                            duit: 'utama',
                                             style: GoogleFonts.plusJakartaSans(
                                               fontSize: 13,
                                               fontWeight: FontWeight.w700,
                                               color: AppColors.income,
                                             ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
+                                            alignment: Alignment.centerLeft,
                                           ),
                                         ],
                                       ),
@@ -268,15 +370,15 @@ class DailyLedgerScreen extends ConsumerWidget {
                                                   : AppColors.lightTextSecondary,
                                             ),
                                           ),
-                                          Text(
-                                            formatRupiah(exp),
+                                          MoneyText(
+                                            amount: exp,
+                                            duit: 'utama',
                                             style: GoogleFonts.plusJakartaSans(
                                               fontSize: 13,
                                               fontWeight: FontWeight.w700,
                                               color: AppColors.expense,
                                             ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
+                                            alignment: Alignment.centerLeft,
                                           ),
                                         ],
                                       ),
@@ -303,7 +405,7 @@ class DailyLedgerScreen extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Riwayat Duit Harian',
+                      'Riwayat Duit Utama',
                       style: GoogleFonts.plusJakartaSans(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
@@ -327,7 +429,7 @@ class DailyLedgerScreen extends ConsumerWidget {
               ),
               error: (err, _) => SliverFillRemaining(
                 child: ErrorState(
-                  message: 'Gagal memuat duit harian: $err',
+                  message: 'Gagal memuat duit utama: $err',
                   onRetry: () =>
                       ref.invalidate(transactionsByLedgerStreamProvider('daily')),
                 ),
@@ -338,9 +440,9 @@ class DailyLedgerScreen extends ConsumerWidget {
                     hasScrollBody: false,
                     child: EmptyState(
                       icon: Icons.receipt_long_rounded,
-                      title: 'Belum Ada Transaksi Duit Harian',
+                      title: 'Belum Ada Transaksi Duit Utama',
                       message:
-                          'Catat transaksi duit harian Anda agar keuangan lebih terkontrol.',
+                          'Catat transaksi duit utama Anda agar keuangan lebih terkontrol.',
                       buttonText: 'Tambah Transaksi Pertama',
                       onButtonPressed: () =>
                           context.push('/tambah-transaksi', extra: 'daily'),
@@ -402,7 +504,7 @@ class DailyLedgerScreen extends ConsumerWidget {
                                       cat?.name ??
                                           (tx.note?.isNotEmpty == true
                                               ? tx.note!
-                                              : 'Transaksi Harian'),
+                                              : 'Transaksi Utama'),
                                       style: GoogleFonts.plusJakartaSans(
                                         fontWeight: FontWeight.w600,
                                         fontSize: 14,
@@ -440,13 +542,33 @@ class DailyLedgerScreen extends ConsumerWidget {
                                   ],
                                 ),
                               ),
-                              Text(
-                                '${isExpense ? "-" : (isIncome ? "+" : "")}${formatRupiah(tx.amount)}',
+                              MoneyText(
+                                amount: tx.amount,
+                                duit: 'utama',
+                                prefix: isExpense ? '-' : (isIncome ? '+' : ''),
                                 style: GoogleFonts.plusJakartaSans(
                                   fontWeight: FontWeight.w700,
                                   fontSize: 14,
                                   color: color,
                                 ),
+                              ),
+                              const SizedBox(width: 4),
+                              IconButton(
+                                icon: Icon(
+                                  Icons.delete_outline_rounded,
+                                  size: 19,
+                                  color: isDark
+                                      ? AppColors.darkTextSecondary
+                                      : AppColors.lightTextSecondary,
+                                ),
+                                tooltip: 'Hapus Transaksi',
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                  minWidth: 28,
+                                  minHeight: 28,
+                                ),
+                                onPressed: () =>
+                                    _handleDeleteTransaction(context, ref, tx),
                               ),
                             ],
                           ),
@@ -475,7 +597,7 @@ class DailyLedgerScreen extends ConsumerWidget {
         ),
         child: SafeArea(
           child: PrimaryButton(
-            text: '+ Catat Transaksi Harian',
+            text: '+ Catat Transaksi Utama',
             onPressed: () => context.push('/tambah-transaksi', extra: 'daily'),
           ),
         ),

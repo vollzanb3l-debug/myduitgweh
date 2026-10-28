@@ -2,11 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/duit_type.dart';
 import '../providers/app_state_provider.dart';
-import '../../data/repositories/category_repository.dart';
 import '../../data/repositories/providers.dart';
-import '../../data/repositories/saving_goal_repository.dart';
-import '../../data/repositories/transaction_repository.dart';
-import '../../data/repositories/wallet_repository.dart';
 
 class TotalResetService {
   TotalResetService._();
@@ -26,27 +22,19 @@ class TotalResetService {
         // Abaikan jika database in-memory atau mock testing
       }
 
-      // 2. Reset repository in-memory
+      // 2. Reset repository (Drift / InMemory)
       try {
         final walletRepo = ref.read(walletRepositoryProvider);
-        if (walletRepo is InMemoryWalletRepository) {
-          walletRepo.resetToInitial();
-        }
+        walletRepo.resetToInitial();
 
         final categoryRepo = ref.read(categoryRepositoryProvider);
-        if (categoryRepo is InMemoryCategoryRepository) {
-          categoryRepo.resetToInitial();
-        }
+        categoryRepo.resetToInitial();
 
         final goalRepo = ref.read(savingGoalRepositoryProvider);
-        if (goalRepo is InMemorySavingGoalRepository) {
-          goalRepo.clearAll();
-        }
+        goalRepo.clearAll();
 
         final txRepo = ref.read(transactionRepositoryProvider);
-        if (txRepo is InMemoryTransactionRepository) {
-          txRepo.clearAll();
-        }
+        txRepo.clearAll();
       } catch (_) {}
 
       // 3. Hapus shared_preferences
@@ -64,6 +52,7 @@ class TotalResetService {
         ref.read(isAppLockedProvider.notifier).state = false;
         ref.read(activeDuitProvider.notifier).select(DuitSelection.semua);
         await ref.read(hideBalanceProvider.notifier).setHidden(false);
+        await ref.read(duitHideBalanceProvider.notifier).setAll(false);
         await ref.read(historyFilterProvider.notifier).setFilter('daily');
         await ref.read(themeModeProvider.notifier).setThemeMode('system');
       } catch (_) {}

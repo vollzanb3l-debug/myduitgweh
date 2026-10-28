@@ -29,6 +29,7 @@ class RestoreResult {
   final int restoredCategories;
   final int skippedCount;
   final List<String> skippedReasons;
+  final String? userName;
 
   const RestoreResult({
     required this.success,
@@ -39,6 +40,7 @@ class RestoreResult {
     this.restoredCategories = 0,
     this.skippedCount = 0,
     this.skippedReasons = const [],
+    this.userName,
   });
 
   factory RestoreResult.failure(String message) {
@@ -99,6 +101,7 @@ class BackupService {
         'activeDuitKey': _prefs.activeDuitKey,
         'isBalanceHidden': _prefs.isBalanceHidden,
         'historyFilter': _prefs.historyFilter,
+        'hideBalance': _prefs.getAllDuitHideBalance(),
       },
       'wallets': wallets.map((w) => w.toMap()).toList(),
       'categories': categories.map((c) => c.toMap()).toList(),
@@ -200,10 +203,26 @@ class BackupService {
         data['backupVersion'] = 1;
         data['appVersion'] ??= '1.0.0';
         return data;
-      // Di masa mendatang, setiap kenaikan currentBackupVersion (+1):
-      // case 1:
-      //   ... migrasi v1 ke v2 ...
-      //   return data;
+      case 1:
+        // Migrasi v1 ke v2: Pastikan preferences memuat userName & per-duit hideBalance
+        data['backupVersion'] = 2;
+        data['appVersion'] ??= '1.0.0';
+        final prefs = (data['preferences'] as Map<String, dynamic>?) ?? {};
+        final isHidden = prefs['isBalanceHidden'] == true;
+        prefs['userName'] ??= '';
+        prefs['themeMode'] ??= 'system';
+        prefs['activeDuitKey'] ??= 'utama';
+        prefs['historyFilter'] ??= 'daily';
+        prefs['isBalanceHidden'] ??= isHidden;
+        prefs['hideBalance'] ??= {
+          'utama': isHidden,
+          'saldo': isHidden,
+          'tabungan': isHidden,
+          'pencapaian': isHidden,
+          'semua': isHidden,
+        };
+        data['preferences'] = prefs;
+        return data;
       default:
         return data;
     }
@@ -474,9 +493,11 @@ class BackupService {
 
       // C. Pulihkan preferensi pengguna yang valid
       final prefsMap = data['preferences'] as Map<String, dynamic>?;
+      String? restoredName;
       if (prefsMap != null) {
-        if (prefsMap['userName'] is String) {
-          await _prefs.setUserName(prefsMap['userName'] as String);
+        if (prefsMap['userName'] is String && (prefsMap['userName'] as String).trim().isNotEmpty) {
+          restoredName = (prefsMap['userName'] as String).trim();
+          await _prefs.setUserName(restoredName);
         }
         if (prefsMap['themeMode'] is String) {
           await _prefs.setThemeMode(prefsMap['themeMode'] as String);
@@ -490,6 +511,14 @@ class BackupService {
         if (prefsMap['historyFilter'] is String) {
           await _prefs.setHistoryFilter(prefsMap['historyFilter'] as String);
         }
+        final hideMap = prefsMap['hideBalance'] as Map<String, dynamic>?;
+        if (hideMap != null) {
+          for (final entry in hideMap.entries) {
+            if (entry.value is bool) {
+              await _prefs.setHideBalanceForDuit(entry.key, entry.value as bool);
+            }
+          }
+        }
       }
 
       return RestoreResult(
@@ -501,6 +530,7 @@ class BackupService {
         restoredCategories: validCategories.length,
         skippedCount: skippedCount,
         skippedReasons: skippedReasons,
+        userName: restoredName,
       );
     } catch (e) {
       // Rollback: Kembalikan kondisi data dari snapshot jika terjadi kegagalan

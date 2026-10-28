@@ -49,11 +49,72 @@ class PreferencesService {
   }
 
   static const String _keyIsBalanceHidden = 'is_balance_hidden';
+  static const String _keyHideBalanceUtama = 'hide_balance_utama';
+  static const String _keyHideBalanceSaldo = 'hide_balance_saldo';
+  static const String _keyHideBalanceTabungan = 'hide_balance_tabungan';
+  static const String _keyHideBalancePencapaian = 'hide_balance_pencapaian';
+  static const String _keyHideBalanceSemua = 'hide_balance_semua';
+
+  String _duitToHideKey(String duitKey) {
+    final lower = duitKey.toLowerCase();
+    if (lower.contains('utama') || lower.contains('harian') || lower.contains('daily')) {
+      return _keyHideBalanceUtama;
+    }
+    if (lower.contains('saldo') || lower.contains('balance')) {
+      return _keyHideBalanceSaldo;
+    }
+    if (lower.contains('tabungan') || lower.contains('saving')) {
+      return _keyHideBalanceTabungan;
+    }
+    if (lower.contains('pencapaian') || lower.contains('goal')) {
+      return _keyHideBalancePencapaian;
+    }
+    return _keyHideBalanceSemua;
+  }
 
   bool get isBalanceHidden => _prefs.getBool(_keyIsBalanceHidden) ?? false;
 
-  Future<bool> setIsBalanceHidden(bool value) {
+  Future<bool> setIsBalanceHidden(bool value) async {
+    await setHideBalanceForDuit('utama', value);
+    await setHideBalanceForDuit('saldo', value);
+    await setHideBalanceForDuit('tabungan', value);
+    await setHideBalanceForDuit('pencapaian', value);
+    await setHideBalanceForDuit('semua', value);
     return _prefs.setBool(_keyIsBalanceHidden, value);
+  }
+
+  bool isBalanceHiddenForDuit(String duitKey) {
+    final key = _duitToHideKey(duitKey);
+    final val = _prefs.getBool(key);
+    if (val != null) return val;
+    return _prefs.getBool(_keyIsBalanceHidden) ?? false;
+  }
+
+  Future<bool> setHideBalanceForDuit(String duitKey, bool value) async {
+    final key = _duitToHideKey(duitKey);
+    await _prefs.setBool(key, value);
+    return true;
+  }
+
+  Map<String, bool> getAllDuitHideBalance() {
+    return {
+      'utama': isBalanceHiddenForDuit('utama'),
+      'saldo': isBalanceHiddenForDuit('saldo'),
+      'tabungan': isBalanceHiddenForDuit('tabungan'),
+      'pencapaian': isBalanceHiddenForDuit('pencapaian'),
+      'semua': isBalanceHiddenForDuit('semua'),
+    };
+  }
+
+  Future<void> migrateHideBalanceSettings() async {
+    final oldGlobal = _prefs.getBool(_keyIsBalanceHidden);
+    if (oldGlobal != null) {
+      if (!_prefs.containsKey(_keyHideBalanceUtama)) await _prefs.setBool(_keyHideBalanceUtama, oldGlobal);
+      if (!_prefs.containsKey(_keyHideBalanceSaldo)) await _prefs.setBool(_keyHideBalanceSaldo, oldGlobal);
+      if (!_prefs.containsKey(_keyHideBalanceTabungan)) await _prefs.setBool(_keyHideBalanceTabungan, oldGlobal);
+      if (!_prefs.containsKey(_keyHideBalancePencapaian)) await _prefs.setBool(_keyHideBalancePencapaian, oldGlobal);
+      if (!_prefs.containsKey(_keyHideBalanceSemua)) await _prefs.setBool(_keyHideBalanceSemua, oldGlobal);
+    }
   }
 
   static const String _keyHistoryFilter = 'history_active_filter';

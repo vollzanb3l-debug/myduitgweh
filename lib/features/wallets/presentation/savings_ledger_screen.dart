@@ -11,10 +11,111 @@ import '../../../core/utils/formatters.dart';
 import '../../../core/utils/icon_helper.dart';
 import '../../../core/widgets/atur_saldo_sheet.dart';
 import '../../../core/widgets/widgets.dart';
+import '../../../data/models/transaction_model.dart';
 import '../../../data/repositories/providers.dart';
 
 class SavingsLedgerScreen extends ConsumerWidget {
   const SavingsLedgerScreen({super.key});
+
+  Future<bool?> _showDeleteConfirmation(
+    BuildContext context,
+    TransactionItem item,
+  ) async {
+    final isTransfer = item.transferPartnerId != null ||
+        (item.note != null &&
+            (item.note!.startsWith('Transfer') ||
+                item.note!.contains('Transfer') ||
+                item.note!.startsWith('Dari ') ||
+                item.note!.startsWith('Ke ')));
+
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Hapus Transaksi?',
+          style: GoogleFonts.plusJakartaSans(
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+          ),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Hapus transaksi ini? Saldo akan dihitung ulang.',
+              style: GoogleFonts.plusJakartaSans(fontSize: 14),
+            ),
+            if (isTransfer) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Transaksi ini terhubung dengan transfer. Kedua transaksi akan dihapus.',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.expense,
+                ),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(
+              'Batal',
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.w600,
+                color: AppColors.lightTextSecondary,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFE57373),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              'Hapus',
+              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleDeleteTransaction(
+    BuildContext context,
+    WidgetRef ref,
+    TransactionItem item,
+  ) async {
+    final confirmed = await _showDeleteConfirmation(context, item);
+    if (confirmed == true && context.mounted) {
+      final repo = ref.read(transactionRepositoryProvider);
+      await repo.deleteTransaction(item.id!);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Transaksi dihapus',
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            backgroundColor: AppColors.darkAccent,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -105,7 +206,7 @@ class SavingsLedgerScreen extends ConsumerWidget {
                           ),
                           IconButton(
                             icon: Icon(
-                              ref.watch(hideBalanceProvider)
+                              ref.watch(isDuitHiddenProvider('tabungan'))
                                   ? Icons.visibility_off_rounded
                                   : Icons.visibility_rounded,
                               size: 18,
@@ -113,13 +214,13 @@ class SavingsLedgerScreen extends ConsumerWidget {
                                   ? AppColors.darkTextSecondary
                                   : AppColors.lightTextSecondary,
                             ),
-                            tooltip: ref.watch(hideBalanceProvider)
+                            tooltip: ref.watch(isDuitHiddenProvider('tabungan'))
                                 ? 'Tampilkan Saldo'
                                 : 'Sembunyikan Saldo',
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
                             onPressed: () =>
-                                ref.read(hideBalanceProvider.notifier).toggle(),
+                                ref.read(duitHideBalanceProvider.notifier).toggle('tabungan'),
                           ),
                           const SizedBox(width: 8),
                           OutlinedButton.icon(
@@ -157,6 +258,7 @@ class SavingsLedgerScreen extends ConsumerWidget {
                         child: balanceAsync.when(
                           data: (bal) => AnimatedRupiahCounter(
                             amount: bal,
+                            duit: 'tabungan',
                             style: GoogleFonts.plusJakartaSans(
                               fontSize: 26,
                               fontWeight: FontWeight.w800,
@@ -221,15 +323,15 @@ class SavingsLedgerScreen extends ConsumerWidget {
                                                   : AppColors.lightTextSecondary,
                                             ),
                                           ),
-                                          Text(
-                                            formatRupiah(inc),
+                                          MoneyText(
+                                            amount: inc,
+                                            duit: 'tabungan',
                                             style: GoogleFonts.plusJakartaSans(
                                               fontSize: 13,
                                               fontWeight: FontWeight.w700,
                                               color: AppColors.income,
                                             ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
+                                            alignment: Alignment.centerLeft,
                                           ),
                                         ],
                                       ),
@@ -269,15 +371,15 @@ class SavingsLedgerScreen extends ConsumerWidget {
                                                   : AppColors.lightTextSecondary,
                                             ),
                                           ),
-                                          Text(
-                                            formatRupiah(exp),
+                                          MoneyText(
+                                            amount: exp,
+                                            duit: 'tabungan',
                                             style: GoogleFonts.plusJakartaSans(
                                               fontSize: 13,
                                               fontWeight: FontWeight.w700,
                                               color: AppColors.expense,
                                             ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
+                                            alignment: Alignment.centerLeft,
                                           ),
                                         ],
                                       ),
@@ -442,13 +544,33 @@ class SavingsLedgerScreen extends ConsumerWidget {
                                   ],
                                 ),
                               ),
-                              Text(
-                                '${isExpense ? "-" : (isIncome ? "+" : "")}${formatRupiah(tx.amount)}',
+                              MoneyText(
+                                amount: tx.amount,
+                                duit: 'tabungan',
+                                prefix: isExpense ? '-' : (isIncome ? '+' : ''),
                                 style: GoogleFonts.plusJakartaSans(
                                   fontWeight: FontWeight.w700,
                                   fontSize: 14,
                                   color: color,
                                 ),
+                              ),
+                              const SizedBox(width: 4),
+                              IconButton(
+                                icon: Icon(
+                                  Icons.delete_outline_rounded,
+                                  size: 19,
+                                  color: isDark
+                                      ? AppColors.darkTextSecondary
+                                      : AppColors.lightTextSecondary,
+                                ),
+                                tooltip: 'Hapus Transaksi',
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(
+                                  minWidth: 28,
+                                  minHeight: 28,
+                                ),
+                                onPressed: () =>
+                                    _handleDeleteTransaction(context, ref, tx),
                               ),
                             ],
                           ),

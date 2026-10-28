@@ -63,6 +63,13 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     BuildContext context,
     TransactionItem item,
   ) async {
+    final isTransfer = item.transferPartnerId != null ||
+        (item.note != null &&
+            (item.note!.startsWith('Transfer') ||
+                item.note!.contains('Transfer') ||
+                item.note!.startsWith('Dari ') ||
+                item.note!.startsWith('Ke ')));
+
     return showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -74,9 +81,26 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
             fontSize: 18,
           ),
         ),
-        content: Text(
-          'Apakah Anda yakin ingin menghapus transaksi sebesar ${formatRupiah(item.amount)} ini?',
-          style: GoogleFonts.plusJakartaSans(fontSize: 14),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Hapus transaksi ini? Saldo akan dihitung ulang.',
+              style: GoogleFonts.plusJakartaSans(fontSize: 14),
+            ),
+            if (isTransfer) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Transaksi ini terhubung dengan transfer. Kedua transaksi akan dihapus.',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.expense,
+                ),
+              ),
+            ],
+          ],
         ),
         actions: [
           TextButton(
@@ -91,7 +115,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.expense,
+              backgroundColor: const Color(0xFFE57373),
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -106,6 +130,32 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _handleDeleteTransaction(
+    BuildContext context,
+    TransactionItem item,
+  ) async {
+    final confirmed = await _showDeleteConfirmation(context, item);
+    if (confirmed == true && context.mounted) {
+      final repo = ref.read(transactionRepositoryProvider);
+      await repo.deleteTransaction(item.id!);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Transaksi dihapus',
+              style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            backgroundColor: AppColors.darkAccent,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -407,6 +457,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                                     // Nominal Transaksi
                                     MoneyText(
                                       amount: item.amount,
+                                      duit: item.ledger,
                                       prefix: isIncome ? '+ ' : '- ',
                                       style: GoogleFonts.plusJakartaSans(
                                         fontSize: 15,
@@ -415,6 +466,24 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                                             ? AppColors.income
                                             : AppColors.expense,
                                       ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    IconButton(
+                                      icon: Icon(
+                                        Icons.delete_outline_rounded,
+                                        size: 19,
+                                        color: isDark
+                                            ? AppColors.darkTextSecondary
+                                            : AppColors.lightTextSecondary,
+                                      ),
+                                      tooltip: 'Hapus Transaksi',
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(
+                                        minWidth: 28,
+                                        minHeight: 28,
+                                      ),
+                                      onPressed: () =>
+                                          _handleDeleteTransaction(context, item),
                                     ),
                                   ],
                                 ),

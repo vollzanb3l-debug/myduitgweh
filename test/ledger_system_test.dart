@@ -35,7 +35,7 @@ void main() {
     test('1. Kategori dan dompet awal terisi sesuai dengan jenis catatan', () async {
       final dailyWallets = await walletRepo.getWalletsByLedger('daily');
       expect(dailyWallets.length, 1);
-      expect(dailyWallets.first.name, 'Uang Harian');
+      expect(dailyWallets.first.name, 'Uang Utama');
 
       final balanceWallets = await walletRepo.getWalletsByLedger('balance');
       expect(balanceWallets.length, 3);
