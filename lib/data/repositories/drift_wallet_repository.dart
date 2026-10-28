@@ -93,6 +93,45 @@ class DriftWalletRepository implements WalletRepository {
   }
 
   @override
+  Future<WalletItem> getOrCreateInternalWallet(String ledger) async {
+    final list = await getWalletsByLedger(ledger);
+    if (list.isNotEmpty) return list.first;
+
+    String name;
+    switch (ledger) {
+      case 'daily':
+        name = 'Uang Utama';
+        break;
+      case 'balance':
+        name = 'Duit Saldo';
+        break;
+      case 'saving':
+        name = 'Duit Tabungan';
+        break;
+      default:
+        name = 'Duit $ledger';
+    }
+
+    final id = await insertWallet(
+      WalletItem(
+        name: name,
+        type: ledger,
+        ledger: ledger,
+        initialBalance: 0,
+        createdAt: DateTime.now(),
+      ),
+    );
+    return (await getWalletById(id))!;
+  }
+
+  @override
+  Future<void> ensureInternalWallets() async {
+    for (final l in ['daily', 'balance', 'saving']) {
+      await getOrCreateInternalWallet(l);
+    }
+  }
+
+  @override
   void clearAll() {
     db.delete(db.wallets).go();
   }

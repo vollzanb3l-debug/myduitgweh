@@ -9,7 +9,7 @@ class BackupConstants {
   BackupConstants._();
 
   /// Versi format berkas cadangan saat ini (angka bulat positif, mulai 1)
-  static const int currentBackupVersion = 2;
+  static const int currentBackupVersion = 3;
 
   /// Versi aplikasi saat ini
   static const String currentAppVersion = '1.0.0';

@@ -223,6 +223,76 @@ class BackupService {
         };
         data['preferences'] = prefs;
         return data;
+      case 2:
+        // Migrasi v2 ke v3: Hilangkan konsep akun (gabungkan ke 1 dompet internal per duit)
+        data['backupVersion'] = 3;
+        final rawWallets = (data['wallets'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? [];
+        final rawTxs = (data['transactions'] as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? [];
+
+        final Map<String, List<Map<String, dynamic>>> byLedger = {
+          'daily': [],
+          'balance': [],
+          'saving': [],
+        };
+
+        for (final w in rawWallets) {
+          final ledger = (w['ledger'] ?? w['type'] ?? 'daily').toString();
+          if (byLedger.containsKey(ledger)) {
+            byLedger[ledger]!.add(w);
+          } else {
+            byLedger['balance']!.add(w);
+          }
+        }
+
+        final List<Map<String, dynamic>> consolidatedWallets = [];
+        final Map<int, int> remappedWalletIds = {};
+
+        byLedger.forEach((ledger, list) {
+          if (list.isEmpty) {
+            String defaultName = ledger == 'daily' ? 'Uang Utama' : (ledger == 'balance' ? 'Duit Saldo' : 'Duit Tabungan');
+            consolidatedWallets.add({
+              'id': ledger == 'daily' ? 1 : (ledger == 'balance' ? 2 : 3),
+              'name': defaultName,
+              'type': ledger,
+              'ledger': ledger,
+              'initialBalance': 0,
+              'createdAt': DateTime.now().toIso8601String(),
+            });
+          } else {
+            final primary = Map<String, dynamic>.from(list.first);
+            final primaryId = (primary['id'] as num?)?.toInt() ?? (ledger == 'daily' ? 1 : (ledger == 'balance' ? 2 : 3));
+            primary['id'] = primaryId;
+            int totalInitial = (primary['initialBalance'] as num?)?.toInt() ?? 0;
+
+            String defaultName = ledger == 'daily' ? 'Uang Utama' : (ledger == 'balance' ? 'Duit Saldo' : 'Duit Tabungan');
+            primary['name'] = defaultName;
+            primary['type'] = ledger;
+            primary['ledger'] = ledger;
+
+            for (int i = 1; i < list.length; i++) {
+              final other = list[i];
+              totalInitial += (other['initialBalance'] as num?)?.toInt() ?? 0;
+              final otherId = (other['id'] as num?)?.toInt();
+              if (otherId != null) {
+                remappedWalletIds[otherId] = primaryId;
+              }
+            }
+            primary['initialBalance'] = totalInitial;
+            consolidatedWallets.add(primary);
+          }
+        });
+
+        // Remap transaksi yang merujuk akun lama
+        for (final t in rawTxs) {
+          final wid = (t['walletId'] as num?)?.toInt();
+          if (wid != null && remappedWalletIds.containsKey(wid)) {
+            t['walletId'] = remappedWalletIds[wid];
+          }
+        }
+
+        data['wallets'] = consolidatedWallets;
+        data['transactions'] = rawTxs;
+        return data;
       default:
         return data;
     }
@@ -481,6 +551,8 @@ class BackupService {
       for (final w in validWallets) {
         await _walletRepo.insertWallet(w);
       }
+      // Pastikan dompet internal untuk semua 3 duit selalu ada
+      await _walletRepo.ensureInternalWallets();
       for (final c in validCategories) {
         await _catRepo.insertCategory(c);
       }

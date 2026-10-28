@@ -102,6 +102,91 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
     );
   }
 
+  Future<void> _showQuickAddGoalDialog() async {
+    final titleCtrl = TextEditingController();
+    final targetCtrl = TextEditingController();
+    String? errorText;
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Text('Buat Target Impian Baru'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Nama Target:'),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: titleCtrl,
+                  decoration: InputDecoration(
+                    hintText: 'Misal: Beli Laptop',
+                    errorText: errorText,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text('Nominal Target:'),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: targetCtrl,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [CurrencyInputFormatter()],
+                  decoration: const InputDecoration(
+                    prefixText: 'Rp ',
+                    hintText: '0',
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
+                onPressed: () async {
+                  final title = titleCtrl.text.trim();
+                  final target = CurrencyInputFormatter.parseRupiah(targetCtrl.text);
+                  if (title.length < 2) {
+                    setDialogState(() => errorText = 'Nama target minimal 2 karakter');
+                    return;
+                  }
+                  if (target <= 0) {
+                    setDialogState(() => errorText = 'Nominal target harus lebih dari Rp 0');
+                    return;
+                  }
+
+                  final goalRepo = ref.read(savingGoalRepositoryProvider);
+                  final newId = await goalRepo.insertSavingGoal(
+                    SavingGoalItem(
+                      name: title,
+                      targetAmount: target,
+                      currentAmount: 0,
+                      walletId: 1,
+                      icon: 'stars_rounded',
+                    ),
+                  );
+
+                  setState(() {
+                    _selectedGoalId = newId;
+                    _errorMessage = null;
+                  });
+
+                  if (ctx.mounted) Navigator.pop(ctx);
+                },
+                child: const Text('Simpan'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
   late String _ledger; // 'daily', 'balance', 'saving', 'goal'
   late String _type; // 'expense' atau 'income'
   late TextEditingController _amountController;
@@ -143,10 +228,18 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
       _selectedDate = DateTime.now();
 
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
         ref
             .read(activeDuitProvider.notifier)
             .select(DuitSelection.fromLedger(_ledger));
+        if (_ledger != 'goal' && _selectedWalletId == null) {
+          final wallet = await ref.read(walletRepositoryProvider).getOrCreateInternalWallet(_ledger);
+          if (mounted) {
+            setState(() {
+              _selectedWalletId = wallet.id;
+            });
+          }
+        }
       });
     }
 
@@ -206,11 +299,26 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
       if (_deductFromWallet && _selectedWalletId == null) {
         setState(() {
-          _errorMessage = 'Pilih dompet yang akan dipotong saldonya';
+          _errorMessage = 'Pilih duit yang akan dipotong saldonya';
         });
         return;
       }
     } else {
+      // Penarikan Duit Tabungan tidak boleh melebihi saldo tabungan
+      if (_ledger == 'saving' && _type == 'expense') {
+        final txRepo = ref.read(transactionRepositoryProvider);
+        final currentSavingBalance = await txRepo.calculateLedgerBalance('saving');
+        final editAmount = (widget.transactionToEdit != null && widget.transactionToEdit!.type == 'expense')
+            ? widget.transactionToEdit!.amount
+            : 0;
+        if (amount > (currentSavingBalance + editAmount)) {
+          setState(() {
+            _errorMessage = 'Saldo tabungan tidak cukup';
+          });
+          return;
+        }
+      }
+
       if (_selectedCategoryId == null) {
         setState(() {
           _errorMessage = 'Pilih kategori transaksi terlebih dahulu';
@@ -218,12 +326,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         return;
       }
 
-      if (_selectedWalletId == null) {
-        setState(() {
-          _errorMessage = 'Pilih dompet/akun transaksi terlebih dahulu';
-        });
-        return;
-      }
+      // Gunakan dompet internal secara otomatis (tanpa perlu dipilih pengguna)
+      final walletRepo = ref.read(walletRepositoryProvider);
+      final internalWallet = await walletRepo.getOrCreateInternalWallet(_ledger);
+      _selectedWalletId = internalWallet.id;
     }
 
     setState(() {
@@ -429,10 +535,10 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                 _buildCategorySelector(categoriesAsync, isDark),
               ],
 
-              const SizedBox(height: 24),
-
-              // 5. Pilihan Dompet / Akun Penyimpanan
-              _buildWalletSelector(walletsAsync, isDark),
+              if (_ledger == 'goal') ...[
+                const SizedBox(height: 24),
+                _buildWalletSelector(walletsAsync, isDark),
+              ],
 
               const SizedBox(height: 20),
 
@@ -754,10 +860,12 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                 .toList();
 
             if (filtered.isEmpty) {
-              return const EmptyState(
+              return EmptyState(
                 title: 'Kategori Belum Ada',
                 message: 'Belum ada kategori untuk jenis transaksi ini.',
                 icon: Icons.category_outlined,
+                buttonText: 'Buat Kategori Sekarang',
+                onButtonPressed: () => _showAddCustomCategoryDialog(),
               );
             }
 
@@ -894,11 +1002,12 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         goalsAsync.when(
           data: (goals) {
             if (goals.isEmpty) {
-              return const EmptyState(
+              return EmptyState(
                 title: 'Belum Ada Target Pencapaian',
-                message:
-                    'Buat target impian terlebih dahulu di Duit Pencapaian.',
+                message: 'Buat target impian baru untuk mulai menyetor.',
                 icon: Icons.emoji_events_outlined,
+                buttonText: 'Buat Target Sekarang',
+                onButtonPressed: () => _showQuickAddGoalDialog(),
               );
             }
 
@@ -1112,120 +1221,8 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
       );
     }
 
-    // Untuk daily, balance, saving: pilih dompet yang relevan
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Pilih Tujuan',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            color: isDark
-                ? AppColors.darkTextPrimary
-                : AppColors.lightTextPrimary,
-          ),
-        ),
-        const SizedBox(height: 10),
-        walletsAsync.when(
-          data: (wallets) {
-            // Filter dompet sesuai dengan ledger aktif
-            final filtered =
-                wallets.where((w) => w.ledger == _ledger).toList();
-
-            if (filtered.isEmpty) {
-              return const EmptyState(
-                title: 'Akun Belum Ada',
-                message:
-                    'Silakan buat akun untuk duit ini di tab Duit.',
-                icon: Icons.account_balance_wallet_outlined,
-              );
-            }
-
-            // Default pilih dompet pertama jika belum dipilih
-            if (_selectedWalletId == null && filtered.isNotEmpty) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted && _selectedWalletId == null) {
-                  setState(() {
-                    _selectedWalletId = filtered.first.id;
-                  });
-                }
-              });
-            }
-
-            if (filtered.length == 1) {
-              return Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkCard : const Color(0xFFF2ECE1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  filtered.first.name,
-                  style: GoogleFonts.plusJakartaSans(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                    color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                  ),
-                ),
-              );
-            }
-
-            return Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: filtered.map((w) {
-                final isSelected = w.id == _selectedWalletId;
-                return ChoiceChip(
-                  label: Text(w.name),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    if (selected) {
-                      setState(() {
-                        _selectedWalletId = w.id;
-                        _errorMessage = null;
-                      });
-                    }
-                  },
-                  selectedColor: AppColors.primary,
-                  backgroundColor:
-                      isDark ? AppColors.darkCard : Colors.white,
-                  labelStyle: GoogleFonts.plusJakartaSans(
-                    fontWeight:
-                        isSelected ? FontWeight.w700 : FontWeight.w600,
-                    color: isSelected
-                        ? AppColors.darkAccent
-                        : (isDark
-                            ? AppColors.darkTextPrimary
-                            : AppColors.lightTextPrimary),
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(999),
-                    side: BorderSide(
-                      color: isSelected
-                          ? AppColors.primary
-                          : (isDark
-                              ? AppColors.darkBorder
-                              : AppColors.lightBorder),
-                    ),
-                  ),
-                );
-              }).toList(),
-            );
-          },
-          loading: () => const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Center(child: CircularProgressIndicator()),
-          ),
-          error: (err, _) => ErrorState(
-            isCompact: true,
-            title: 'Gagal Memuat Akun',
-            message: 'Tidak dapat memuat daftar akun.',
-            onRetry: () => ref.invalidate(walletsStreamProvider),
-          ),
-        ),
-      ],
-    );
+    // Untuk daily, balance, saving: TIDAK ada pilihan akun.
+    // Dompet internal digunakan secara otomatis di balik layar.
+    return const SizedBox.shrink();
   }
 }

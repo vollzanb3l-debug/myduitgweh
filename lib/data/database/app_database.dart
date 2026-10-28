@@ -15,7 +15,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -56,6 +56,76 @@ class AppDatabase extends _$AppDatabase {
           "UPDATE wallets SET name = 'Uang Utama' WHERE name = 'Uang Harian'",
         );
       }
+      if (from < 6) {
+        // Tahap 16: Hilangkan konsep akun. Gabungkan banyak dompet per ledger ke tepat satu dompet internal.
+        final ledgers = ['daily', 'balance', 'saving'];
+        for (final ledger in ledgers) {
+          final ledgerWallets = await (select(wallets)..where((w) => w.ledger.equals(ledger))).get();
+          if (ledgerWallets.isEmpty) {
+            String name = ledger == 'daily' ? 'Uang Utama' : (ledger == 'balance' ? 'Duit Saldo' : 'Duit Tabungan');
+            await into(wallets).insert(
+              WalletsCompanion.insert(
+                name: name,
+                type: ledger,
+                ledger: Value(ledger),
+                initialBalance: const Value(0),
+                createdAt: Value(DateTime.now()),
+              ),
+            );
+          } else if (ledgerWallets.length > 1) {
+            final primaryWallet = ledgerWallets.first;
+            final otherWallets = ledgerWallets.sublist(1);
+            final otherIds = otherWallets.map((w) => w.id).toList();
+
+            // 1. Jumlahkan saldo awal semua akun lama ke dompet internal
+            int totalInitial = primaryWallet.initialBalance;
+            for (final other in otherWallets) {
+              totalInitial += other.initialBalance;
+            }
+
+            String primaryName = primaryWallet.name;
+            if (ledger == 'balance' && (primaryName == 'Tunai' || primaryName == 'Bank' || primaryName == 'E-Wallet')) {
+              primaryName = 'Duit Saldo';
+            } else if (ledger == 'saving' && primaryName == 'Tabungan Utama') {
+              primaryName = 'Duit Tabungan';
+            }
+
+            await (update(wallets)..where((w) => w.id.equals(primaryWallet.id))).write(
+              WalletsCompanion(
+                name: Value(primaryName),
+                initialBalance: Value(totalInitial),
+              ),
+            );
+
+            // 2. Arahkan semua transaksi dari akun-akun lain ke dompet internal
+            for (final otherId in otherIds) {
+              await (update(transactions)..where((t) => t.walletId.equals(otherId))).write(
+                TransactionsCompanion(walletId: Value(primaryWallet.id)),
+              );
+              // 3. Hapus akun berlebih
+              await (delete(wallets)..where((w) => w.id.equals(otherId))).go();
+            }
+          }
+        }
+
+        // Pastikan kategori standar Saldo & Tabungan ada
+        final existingCats = await select(categories).get();
+        final existingNames = existingCats.map((c) => '${c.ledger}_${c.type}_${c.name.toLowerCase()}').toSet();
+        for (final c in InitialData.defaultCategories) {
+          final key = '${c.ledger}_${c.type}_${c.name.toLowerCase()}';
+          if (!existingNames.contains(key)) {
+            await into(categories).insert(
+              CategoriesCompanion.insert(
+                name: c.name,
+                icon: c.icon,
+                colorHex: c.colorHex,
+                type: c.type,
+                ledger: Value(c.ledger),
+              ),
+            );
+          }
+        }
+      }
     },
   );
 
@@ -75,6 +145,7 @@ class AppDatabase extends _$AppDatabase {
           id: Value(wallet.id!),
           name: wallet.name,
           type: wallet.type,
+          ledger: Value(wallet.ledger),
           initialBalance: Value(wallet.initialBalance),
           createdAt: Value(wallet.createdAt),
         ),
@@ -90,6 +161,7 @@ class AppDatabase extends _$AppDatabase {
           icon: cat.icon,
           colorHex: cat.colorHex,
           type: cat.type,
+          ledger: Value(cat.ledger),
         ),
       );
     }

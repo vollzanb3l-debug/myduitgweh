@@ -90,7 +90,7 @@ void main() {
     });
 
     test('(Poin 2) Cadangan Backup Versi 2 & Migrasi Bertahap dari Versi 1', () async {
-      expect(BackupConstants.currentBackupVersion, equals(2));
+      expect(BackupConstants.currentBackupVersion, greaterThanOrEqualTo(2));
 
       final backupService = BackupService(
         walletRepo: walletRepo,

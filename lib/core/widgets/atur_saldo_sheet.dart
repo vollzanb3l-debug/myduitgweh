@@ -216,17 +216,10 @@ Future<void> _showTambahSaldoDialog(
   int? preselectedWalletId,
 ) async {
   final ledger = duit.ledgerKey ?? 'daily';
-  final wallets = await ref.read(walletRepositoryProvider).getWalletsByLedger(ledger);
-  if (wallets.isEmpty) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Belum ada akun dompet untuk duit ini.')),
-      );
-    }
-    return;
-  }
-
-  int selectedWalletId = preselectedWalletId ?? wallets.first.id!;
+  final walletRepo = ref.read(walletRepositoryProvider);
+  final internalWallet = await walletRepo.getOrCreateInternalWallet(ledger);
+  final wallets = [internalWallet];
+  int selectedWalletId = preselectedWalletId ?? internalWallet.id!;
   final amountController = TextEditingController();
   final noteController = TextEditingController();
   final formKey = GlobalKey<FormState>();
@@ -390,10 +383,10 @@ Future<void> _showKoreksiSaldoDialog(
   int? preselectedWalletId,
 ) async {
   final ledger = duit.ledgerKey ?? 'daily';
-  final wallets = await ref.read(walletRepositoryProvider).getWalletsByLedger(ledger);
-  if (wallets.isEmpty) return;
-
-  int selectedWalletId = preselectedWalletId ?? wallets.first.id!;
+  final walletRepo = ref.read(walletRepositoryProvider);
+  final internalWallet = await walletRepo.getOrCreateInternalWallet(ledger);
+  final wallets = [internalWallet];
+  int selectedWalletId = preselectedWalletId ?? internalWallet.id!;
   int currentBalance = await ref.read(transactionRepositoryProvider).calculateWalletBalance(selectedWalletId);
 
   final actualController = TextEditingController(text: formatRupiah(currentBalance));
@@ -667,13 +660,10 @@ Future<void> _executeResetWithHistory(
   int? preselectedWalletId,
 ) async {
   final ledger = duit.ledgerKey ?? 'daily';
-  final wallets = await ref.read(walletRepositoryProvider).getWalletsByLedger(ledger);
-  for (final w in wallets) {
-    if (preselectedWalletId == null || w.id == preselectedWalletId) {
-      if (w.id != null) {
-        await ref.read(transactionRepositoryProvider).resetBalanceWithHistory(walletId: w.id!);
-      }
-    }
+  final walletRepo = ref.read(walletRepositoryProvider);
+  final internalWallet = await walletRepo.getOrCreateInternalWallet(ledger);
+  if (internalWallet.id != null) {
+    await ref.read(transactionRepositoryProvider).resetBalanceWithHistory(walletId: internalWallet.id!);
   }
 
   if (context.mounted) {

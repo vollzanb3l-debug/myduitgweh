@@ -277,7 +277,7 @@ void main() {
       expect(find.text('Uang Utama'), findsOneWidget);
     });
 
-    testWidgets('e.2 Dialog Atur Saldo menampilkan dropdown jika opsi lebih dari satu', (
+    testWidgets('e.2 Dialog Atur Saldo Duit Saldo menampilkan badge tujuan tunggal tanpa dropdown (Tahap 16)', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -313,12 +313,12 @@ void main() {
       await tester.tap(find.text('Tambah Saldo'));
       await tester.pumpAndSettle();
 
-      // Untuk Duit Saldo (ada 3 akun: Tunai, Bank, E-Wallet):
-      // Label menjadi "Pilih Tujuan:"
-      expect(find.text('Pilih Tujuan:'), findsOneWidget);
+      // Untuk Duit Saldo:
+      // Label tetap "Tujuan:" karena memakai dompet internal tunggal
+      expect(find.text('Tujuan:'), findsOneWidget);
 
-      // Harus menampilkan DropdownButtonFormField<int>
-      expect(find.byType(DropdownButtonFormField<int>), findsOneWidget);
+      // Tidak menampilkan DropdownButtonFormField<int>
+      expect(find.byType(DropdownButtonFormField<int>), findsNothing);
     });
   });
 }

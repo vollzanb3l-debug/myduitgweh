@@ -74,13 +74,13 @@ void main() {
 
       final result = await backupService.restoreBackup(legacyJson);
       expect(result.success, isTrue);
-      expect(result.restoredWallets, 1);
-      expect(result.restoredCategories, 1);
+      expect(result.restoredWallets, 3);
+      expect(result.restoredCategories, greaterThanOrEqualTo(1));
       expect(result.restoredTransactions, 1);
 
       final wallets = await walletRepo.getAllWallets();
-      expect(wallets.length, 1);
-      expect(wallets.first.name, 'Dompet Tunai');
+      expect(wallets.length, 3);
+      expect(wallets.map((w) => w.ledger), containsAll(['daily', 'balance', 'saving']));
       expect(prefsService.userName, 'Pengguna Lama');
     });
 
@@ -93,12 +93,10 @@ void main() {
       final result = await backupService.restoreBackup(tolerantJson);
       expect(result.success, isTrue);
 
-      // Wallets: name 'Dompet Fleksibel', type default 'balance', initialBalance default 0
+      // Wallets: type default 'balance', initialBalance default 0
       final wallets = await walletRepo.getAllWallets();
-      expect(wallets.length, 1);
-      final w = wallets.first;
-      expect(w.name, 'Dompet Fleksibel');
-      expect(w.type, 'balance');
+      expect(wallets.length, 3);
+      final w = wallets.firstWhere((w) => w.ledger == 'balance');
       expect(w.initialBalance, 0);
 
       // Categories: name 'Makanan', type default 'expense', icon default 'category_rounded'

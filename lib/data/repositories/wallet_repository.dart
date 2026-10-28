@@ -12,6 +12,8 @@ abstract class WalletRepository {
   Stream<List<WalletItem>> watchAllWallets();
   Future<List<WalletItem>> getWalletsByLedger(String ledger);
   Stream<List<WalletItem>> watchWalletsByLedger(String ledger);
+  Future<WalletItem> getOrCreateInternalWallet(String ledger);
+  Future<void> ensureInternalWallets();
   void clearAll();
   void resetToInitial();
 }
@@ -96,6 +98,45 @@ class InMemoryWalletRepository implements WalletRepository {
     yield* _controller.stream.map(
       (list) => list.where((w) => w.ledger == ledger).toList(),
     );
+  }
+
+  @override
+  Future<WalletItem> getOrCreateInternalWallet(String ledger) async {
+    final list = await getWalletsByLedger(ledger);
+    if (list.isNotEmpty) return list.first;
+
+    String name;
+    switch (ledger) {
+      case 'daily':
+        name = 'Uang Utama';
+        break;
+      case 'balance':
+        name = 'Duit Saldo';
+        break;
+      case 'saving':
+        name = 'Duit Tabungan';
+        break;
+      default:
+        name = 'Duit $ledger';
+    }
+
+    final id = await insertWallet(
+      WalletItem(
+        name: name,
+        type: ledger,
+        ledger: ledger,
+        initialBalance: 0,
+        createdAt: DateTime.now(),
+      ),
+    );
+    return (await getWalletById(id))!;
+  }
+
+  @override
+  Future<void> ensureInternalWallets() async {
+    for (final l in ['daily', 'balance', 'saving']) {
+      await getOrCreateInternalWallet(l);
+    }
   }
 
   @override

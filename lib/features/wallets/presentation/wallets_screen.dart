@@ -20,10 +20,12 @@ class WalletsScreen extends ConsumerWidget {
 
     final dailyBalAsync = ref.watch(ledgerBalanceStreamProvider('daily'));
     final balanceBalAsync = ref.watch(ledgerBalanceStreamProvider('balance'));
-    final balanceAccountsAsync =
-        ref.watch(walletsByLedgerStreamProvider('balance'));
     final savingBalAsync = ref.watch(ledgerBalanceStreamProvider('saving'));
     final goalsAsync = ref.watch(savingGoalsStreamProvider);
+
+    final dailyTxAsync = ref.watch(transactionsByLedgerStreamProvider('daily'));
+    final balanceTxAsync = ref.watch(transactionsByLedgerStreamProvider('balance'));
+    final savingTxAsync = ref.watch(transactionsByLedgerStreamProvider('saving'));
 
     return Scaffold(
       appBar: AppBar(
@@ -40,9 +42,11 @@ class WalletsScreen extends ConsumerWidget {
         onRefresh: () async {
           ref.invalidate(ledgerBalanceStreamProvider('daily'));
           ref.invalidate(ledgerBalanceStreamProvider('balance'));
-          ref.invalidate(walletsByLedgerStreamProvider('balance'));
           ref.invalidate(ledgerBalanceStreamProvider('saving'));
           ref.invalidate(savingGoalsStreamProvider);
+          ref.invalidate(transactionsByLedgerStreamProvider('daily'));
+          ref.invalidate(transactionsByLedgerStreamProvider('balance'));
+          ref.invalidate(transactionsByLedgerStreamProvider('saving'));
         },
         child: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
@@ -51,7 +55,7 @@ class WalletsScreen extends ConsumerWidget {
           ),
           children: [
             Text(
-              'Pilih jenis duit untuk melihat rincian transaksi, mengelola akun, dan mengatur saldo.',
+              'Pilih jenis duit untuk melihat rincian transaksi dan mengatur saldo.',
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 13,
                 color: isDark
@@ -61,7 +65,7 @@ class WalletsScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
 
-            // 1. Kartu Duit Harian
+            // 1. Kartu Duit Utama
             _buildLedgerCard(
               context: context,
               ref: ref,
@@ -75,32 +79,53 @@ class WalletsScreen extends ConsumerWidget {
                 ref.read(activeDuitProvider.notifier).select(DuitType.harian);
                 context.push('/duit/harian');
               },
-              summaryContent: dailyBalAsync.when(
-                data: (bal) => Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Saldo Duit Utama',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 12,
-                        color: isDark
-                            ? AppColors.darkTextSecondary
-                            : AppColors.lightTextSecondary,
+              summaryContent: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Saldo Duit Utama',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          color: isDark
+                              ? AppColors.darkTextSecondary
+                              : AppColors.lightTextSecondary,
+                        ),
+                      ),
+                      dailyBalAsync.when(
+                        data: (bal) => MoneyText(
+                          amount: bal,
+                          duit: 'utama',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? Colors.white : AppColors.darkAccent,
+                          ),
+                        ),
+                        loading: () => const Text('Memuat saldo...'),
+                        error: (e, _) => const Text('Rp 0'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  dailyTxAsync.when(
+                    data: (txs) => Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '${txs.length} transaksi tercatat',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          color: isDark
+                              ? AppColors.darkTextSecondary
+                              : AppColors.lightTextSecondary,
+                        ),
                       ),
                     ),
-                    MoneyText(
-                      amount: bal,
-                      duit: 'utama',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: isDark ? Colors.white : AppColors.darkAccent,
-                      ),
-                    ),
-                  ],
-                ),
-                loading: () => const Text('Memuat saldo...'),
-                error: (e, _) => const Text('Rp 0'),
+                    loading: () => const SizedBox.shrink(),
+                    error: (e, _) => const SizedBox.shrink(),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 14),
@@ -125,7 +150,7 @@ class WalletsScreen extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Total Saldo Simpanan',
+                        'Total Duit Saldo',
                         style: GoogleFonts.plusJakartaSans(
                           fontSize: 12,
                           color: isDark
@@ -149,24 +174,19 @@ class WalletsScreen extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 6),
-                  balanceAccountsAsync.when(
-                    data: (accounts) {
-                      if (accounts.isEmpty) return const SizedBox.shrink();
-                      return Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          '${accounts.length} Akun: ${accounts.map((a) => a.name).join(', ')}',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 11,
-                            color: isDark
-                                ? AppColors.darkTextSecondary
-                                : AppColors.lightTextSecondary,
-                          ),
+                  balanceTxAsync.when(
+                    data: (txs) => Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '${txs.length} transaksi tercatat',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          color: isDark
+                              ? AppColors.darkTextSecondary
+                              : AppColors.lightTextSecondary,
                         ),
-                      );
-                    },
+                      ),
+                    ),
                     loading: () => const SizedBox.shrink(),
                     error: (e, _) => const SizedBox.shrink(),
                   ),
@@ -189,32 +209,53 @@ class WalletsScreen extends ConsumerWidget {
                 ref.read(activeDuitProvider.notifier).select(DuitType.tabungan);
                 context.push('/duit/tabungan');
               },
-              summaryContent: savingBalAsync.when(
-                data: (bal) => Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Total Tabungan',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 12,
-                        color: isDark
-                            ? AppColors.darkTextSecondary
-                            : AppColors.lightTextSecondary,
+              summaryContent: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Total Tabungan',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          color: isDark
+                              ? AppColors.darkTextSecondary
+                              : AppColors.lightTextSecondary,
+                        ),
+                      ),
+                      savingBalAsync.when(
+                        data: (bal) => MoneyText(
+                          amount: bal,
+                          duit: 'tabungan',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.duitTabungan,
+                          ),
+                        ),
+                        loading: () => const Text('Memuat saldo...'),
+                        error: (e, _) => const Text('Rp 0'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  savingTxAsync.when(
+                    data: (txs) => Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        '${txs.length} transaksi tercatat',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 11,
+                          color: isDark
+                              ? AppColors.darkTextSecondary
+                              : AppColors.lightTextSecondary,
+                        ),
                       ),
                     ),
-                    MoneyText(
-                      amount: bal,
-                      duit: 'tabungan',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.duitTabungan,
-                      ),
-                    ),
-                  ],
-                ),
-                loading: () => const Text('Memuat saldo...'),
-                error: (e, _) => const Text('Rp 0'),
+                    loading: () => const SizedBox.shrink(),
+                    error: (e, _) => const SizedBox.shrink(),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 14),

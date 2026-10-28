@@ -38,12 +38,12 @@ void main() {
       expect(dailyWallets.first.name, 'Uang Utama');
 
       final balanceWallets = await walletRepo.getWalletsByLedger('balance');
-      expect(balanceWallets.length, 3);
-      expect(balanceWallets.map((w) => w.name), containsAll(['Tunai', 'Bank', 'E-Wallet']));
+      expect(balanceWallets.length, 1);
+      expect(balanceWallets.first.name, 'Duit Saldo');
 
       final savingWallets = await walletRepo.getWalletsByLedger('saving');
       expect(savingWallets.length, 1);
-      expect(savingWallets.first.name, 'Tabungan Utama');
+      expect(savingWallets.first.name, 'Duit Tabungan');
 
       final dailyExpenseCategories = await categoryRepo.getCategoriesByLedger('daily', type: 'expense');
       expect(dailyExpenseCategories.length, 9);
@@ -70,29 +70,36 @@ void main() {
       ]));
 
       final balanceIncomeCategories = await categoryRepo.getCategoriesByLedger('balance', type: 'income');
-      expect(balanceIncomeCategories.length, 4);
+      expect(balanceIncomeCategories.length, 7);
       expect(balanceIncomeCategories.map((c) => c.name), containsAll([
         'Isi Saldo',
         'Transfer Masuk',
         'Gaji',
+        'Tunai',
+        'Bank',
+        'E-Wallet',
         'Lainnya',
       ]));
 
       final balanceExpenseCategories = await categoryRepo.getCategoriesByLedger('balance', type: 'expense');
-      expect(balanceExpenseCategories.length, 4);
+      expect(balanceExpenseCategories.length, 7);
       expect(balanceExpenseCategories.map((c) => c.name), containsAll([
         'Tagihan',
         'Transfer Keluar',
         'Biaya Admin',
+        'Tunai',
+        'Bank',
+        'E-Wallet',
         'Lainnya',
       ]));
 
       final savingCategories = await categoryRepo.getCategoriesByLedger('saving');
-      expect(savingCategories.length, 3);
+      expect(savingCategories.length, 5);
       expect(savingCategories.map((c) => c.name), containsAll([
         'Setoran',
         'Penarikan',
         'Bunga/Bonus',
+        'Lainnya',
       ]));
     });
 

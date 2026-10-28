@@ -1,0 +1,133 @@
+{
+  "appName": "MyDuitGweh",
+  "backupVersion": 3,
+  "appVersion": "1.0.0",
+  "createdAt": "2026-10-28T15:00:00.000Z",
+  "preferences": {
+    "userName": "Rafi Pratama",
+    "themeMode": "system",
+    "activeDuitKey": "utama",
+    "isBalanceHidden": false,
+    "historyFilter": "daily",
+    "hideBalance": {
+      "utama": false,
+      "saldo": false,
+      "tabungan": false,
+      "pencapaian": false,
+      "semua": false
+    }
+  },
+  "wallets": [
+    {
+      "id": 1,
+      "name": "Uang Utama",
+      "type": "daily",
+      "ledger": "daily",
+      "initialBalance": 100000,
+      "createdAt": "2026-10-01T08:00:00.000Z"
+    },
+    {
+      "id": 2,
+      "name": "Duit Saldo",
+      "type": "balance",
+      "ledger": "balance",
+      "initialBalance": 250000,
+      "createdAt": "2026-10-01T08:00:00.000Z"
+    },
+    {
+      "id": 3,
+      "name": "Duit Tabungan",
+      "type": "saving",
+      "ledger": "saving",
+      "initialBalance": 500000,
+      "createdAt": "2026-10-01T08:00:00.000Z"
+    }
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "Makan & Minum",
+      "icon": "restaurant_rounded",
+      "colorHex": "#EF4444",
+      "type": "expense",
+      "ledger": "daily"
+    },
+    {
+      "id": 2,
+      "name": "Gaji",
+      "icon": "payments_rounded",
+      "colorHex": "#10B981",
+      "type": "income",
+      "ledger": "daily"
+    },
+    {
+      "id": 15,
+      "name": "Tunai",
+      "icon": "payments_rounded",
+      "colorHex": "#2ED573",
+      "type": "income",
+      "ledger": "balance"
+    },
+    {
+      "id": 22,
+      "name": "Tunai",
+      "icon": "payments_rounded",
+      "colorHex": "#FF7675",
+      "type": "expense",
+      "ledger": "balance"
+    },
+    {
+      "id": 29,
+      "name": "Setoran",
+      "icon": "add_circle_outline_rounded",
+      "colorHex": "#00B894",
+      "type": "income",
+      "ledger": "saving"
+    },
+    {
+      "id": 32,
+      "name": "Penarikan",
+      "icon": "remove_circle_outline_rounded",
+      "colorHex": "#FF7675",
+      "type": "expense",
+      "ledger": "saving"
+    }
+  ],
+  "savingGoals": [
+    {
+      "id": 1,
+      "name": "Beli Sepeda",
+      "targetAmount": 3000000,
+      "currentAmount": 500000,
+      "targetDate": "2026-12-31T00:00:00.000Z",
+      "colorHex": "#F9A826",
+      "icon": "two_wheeler_rounded",
+      "isCompleted": false
+    }
+  ],
+  "transactions": [
+    {
+      "id": 1,
+      "walletId": 1,
+      "categoryId": 1,
+      "amount": 25000,
+      "type": "expense",
+      "ledger": "daily",
+      "date": "2026-10-15T12:30:00.000Z",
+      "note": "Makan Siang",
+      "createdAt": "2026-10-15T12:30:00.000Z"
+    },
+    {
+      "id": 2,
+      "walletId": 3,
+      "categoryId": 29,
+      "amount": 100000,
+      "type": "income",
+      "ledger": "saving",
+      "date": "2026-10-16T10:00:00.000Z",
+      "note": "Nabung gaji",
+      "createdAt": "2026-10-16T10:00:00.000Z"
+    }
+  ]
+}
+
