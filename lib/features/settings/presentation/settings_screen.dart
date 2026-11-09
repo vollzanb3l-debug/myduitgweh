@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../core/constants/about_text.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/providers/app_state_provider.dart';
 import '../../../core/widgets/numeric_keypad.dart';
@@ -1049,7 +1050,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: Column(
               children: [
                 Text(
-                  'MyDuitGweh v1.0.0',
+                  'MyDuitGweh v${AboutText.appVersion}',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,

@@ -12,8 +12,6 @@ import '../../../data/models/category_model.dart';
 import '../../../data/models/transaction_model.dart';
 import '../../../data/repositories/providers.dart';
 
-enum HistoryFilter { daily, weekly, monthly }
-
 class HistoryScreen extends ConsumerStatefulWidget {
   const HistoryScreen({super.key});
 
@@ -22,25 +20,106 @@ class HistoryScreen extends ConsumerStatefulWidget {
 }
 
 class _HistoryScreenState extends ConsumerState<HistoryScreen> {
+  int _offset = 0;
+  DateTime _currentAnchor = DateTime.now();
+  int _pagingLimit = 50;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentAnchor = DateTime.now();
+  }
+
+  void _resetToCurrent() {
+    setState(() {
+      _offset = 0;
+      _currentAnchor = DateTime.now();
+      _pagingLimit = 50;
+    });
+  }
+
+  void _stepPeriod(int delta, HistoryFilter filter) {
+    if (filter == HistoryFilter.all) return;
+    final newOffset = _offset + delta;
+    if (newOffset > 0) return; // Tidak bisa ke masa depan
+
+    final now = DateTime.now();
+    DateTime newDate;
+    if (filter == HistoryFilter.daily) {
+      newDate = now.add(Duration(days: newOffset));
+    } else if (filter == HistoryFilter.weekly) {
+      newDate = now.add(Duration(days: newOffset * 7));
+    } else {
+      // monthly
+      newDate = DateTime(now.year, now.month + newOffset, 1);
+    }
+
+    setState(() {
+      _offset = newOffset;
+      _currentAnchor = newDate;
+      _pagingLimit = 50;
+    });
+  }
+
+  Future<void> _pickDirectDate(HistoryFilter filter) async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _currentAnchor.isAfter(now) ? now : _currentAnchor,
+      firstDate: DateTime(2020),
+      lastDate: now,
+      helpText: filter == HistoryFilter.monthly
+          ? 'Pilih Bulan/Tanggal'
+          : (filter == HistoryFilter.weekly
+              ? 'Pilih Minggu'
+              : 'Pilih Tanggal'),
+      cancelText: 'Batal',
+      confirmText: 'Pilih',
+    );
+
+    if (picked != null) {
+      final today = DateTime(now.year, now.month, now.day);
+      final pickedDay = DateTime(picked.year, picked.month, picked.day);
+
+      int computedOffset = 0;
+      if (filter == HistoryFilter.daily) {
+        computedOffset = pickedDay.difference(today).inDays;
+      } else if (filter == HistoryFilter.weekly) {
+        final nowMonday = today.subtract(Duration(days: today.weekday - 1));
+        final pickedMonday = pickedDay.subtract(Duration(days: pickedDay.weekday - 1));
+        computedOffset = (pickedMonday.difference(nowMonday).inDays / 7).round();
+      } else if (filter == HistoryFilter.monthly) {
+        computedOffset = (picked.year - now.year) * 12 + (picked.month - now.month);
+      }
+
+      if (computedOffset > 0) computedOffset = 0;
+
+      setState(() {
+        _offset = computedOffset;
+        _currentAnchor = picked;
+        _pagingLimit = 50;
+      });
+    }
+  }
 
   bool _isWithinFilter(DateTime date, HistoryFilter filter) {
-    final now = DateTime.now();
+    if (filter == HistoryFilter.all) return true;
+
+    final target = _currentAnchor;
     switch (filter) {
       case HistoryFilter.daily:
-        return date.year == now.year &&
-            date.month == now.month &&
-            date.day == now.day;
+        return date.year == target.year &&
+            date.month == target.month &&
+            date.day == target.day;
       case HistoryFilter.weekly:
-        final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-        final start = DateTime(
-          startOfWeek.year,
-          startOfWeek.month,
-          startOfWeek.day,
-        );
-        final end = DateTime(now.year, now.month, now.day, 23, 59, 59);
+        final monday = target.subtract(Duration(days: target.weekday - 1));
+        final start = DateTime(monday.year, monday.month, monday.day);
+        final end = DateTime(monday.year, monday.month, monday.day + 6, 23, 59, 59, 999);
         return !date.isBefore(start) && !date.isAfter(end);
       case HistoryFilter.monthly:
-        return date.year == now.year && date.month == now.month;
+        return date.year == target.year && date.month == target.month;
+      case HistoryFilter.all:
+        return true;
     }
   }
 
@@ -90,13 +169,32 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               style: GoogleFonts.plusJakartaSans(fontSize: 14),
             ),
             if (isTransfer) ...[
-              const SizedBox(height: 8),
-              Text(
-                'Transaksi ini terhubung dengan transfer. Kedua transaksi akan dihapus.',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.expense,
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.expense.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.info_outline_rounded,
+                      size: 18,
+                      color: AppColors.expense,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Pasangan transaksi transfer ini juga akan otomatis dihapus.',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 12,
+                          color: AppColors.expense,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -104,7 +202,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
+            onPressed: () => Navigator.pop(ctx, false),
             child: Text(
               'Batal',
               style: GoogleFonts.plusJakartaSans(
@@ -115,13 +213,13 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFE57373),
+              backgroundColor: AppColors.expense,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
               ),
             ),
-            onPressed: () => Navigator.of(ctx).pop(true),
+            onPressed: () => Navigator.pop(ctx, true),
             child: Text(
               'Hapus',
               style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
@@ -132,35 +230,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     );
   }
 
-  Future<void> _handleDeleteTransaction(
-    BuildContext context,
-    TransactionItem item,
-  ) async {
-    final confirmed = await _showDeleteConfirmation(context, item);
-    if (confirmed == true && context.mounted) {
-      final repo = ref.read(transactionRepositoryProvider);
-      await repo.deleteTransaction(item.id!);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Transaksi dihapus',
-              style: GoogleFonts.plusJakartaSans(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            backgroundColor: AppColors.darkAccent,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
     final transactionsAsync = ref.watch(transactionsStreamProvider);
     final categoriesAsync = ref.watch(categoriesStreamProvider);
 
@@ -179,6 +252,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     final filter = switch (filterStr) {
       'weekly' => HistoryFilter.weekly,
       'monthly' => HistoryFilter.monthly,
+      'all' => HistoryFilter.all,
       _ => HistoryFilter.daily,
     };
 
@@ -192,10 +266,10 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       ),
       body: Column(
         children: [
-          // 1. Filter Harian / Mingguan / Bulanan
+          // 1. Filter Harian / Mingguan / Bulanan / Semua
           Padding(
             padding: const EdgeInsets.symmetric(
-              horizontal: 20.0,
+              horizontal: 16.0,
               vertical: 8.0,
             ),
             child: Container(
@@ -209,14 +283,26 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                   _buildFilterTab('Harian', HistoryFilter.daily, filter),
                   _buildFilterTab('Mingguan', HistoryFilter.weekly, filter),
                   _buildFilterTab('Bulanan', HistoryFilter.monthly, filter),
+                  _buildFilterTab('Semua', HistoryFilter.all, filter),
                 ],
               ),
             ),
           ),
 
-          const SizedBox(height: 8),
+          // 2. Bar Navigasi Periode
+          PeriodNavigator(
+            filter: filter,
+            selectedDate: _currentAnchor,
+            offset: _offset,
+            onPrevious: () => _stepPeriod(-1, filter),
+            onNext: _offset < 0 ? () => _stepPeriod(1, filter) : null,
+            onResetToCurrent: _resetToCurrent,
+            onTapPeriod: filter != HistoryFilter.all ? () => _pickDirectDate(filter) : null,
+          ),
 
-          // 2. Daftar Transaksi Dikelompokkan Per Tanggal
+          const SizedBox(height: 4),
+
+          // 3. Daftar Transaksi Dikelompokkan Per Tanggal
           Expanded(
             child: transactionsAsync.when(
               data: (allTransactions) {
@@ -229,22 +315,86 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 }).toList();
 
                 if (filteredList.isEmpty) {
+                  // Cari apakah ada transaksi terakhir di luar periode ini untuk rekomendasi lompat
+                  final duitTransactions = allTransactions.where((t) {
+                    if (!activeDuit.isSemua && t.ledger != activeDuit.ledgerKey) {
+                      return false;
+                    }
+                    return true;
+                  }).toList();
+
+                  DateTime? latestAvailableDate;
+                  if (duitTransactions.isNotEmpty) {
+                    duitTransactions.sort((a, b) => b.date.compareTo(a.date));
+                    latestAvailableDate = duitTransactions.first.date;
+                  }
+
                   return EmptyState(
-                    title:
-                        'Belum Ada Transaksi ${activeDuit.isSemua ? '' : activeDuit.label}',
-                    message: filter == HistoryFilter.daily
-                        ? 'Belum ada transaksi ${activeDuit.isSemua ? '' : 'untuk ${activeDuit.label} '}hari ini.'
+                    title: 'Belum Ada Transaksi di Periode Ini',
+                    message: _offset < 0
+                        ? 'Tidak ada catatan transaksi pada periode yang sedang Anda lihat.'
                         : 'Mulai catat transaksi ${activeDuit.isSemua ? '' : 'untuk ${activeDuit.label} '}agar keuangan terpantau rapi.',
                     icon: Icons.receipt_long_outlined,
-                    action: PrimaryButton(
-                      text: 'Tambah Transaksi',
-                      width: 220,
-                      onPressed: () => context.push(
-                        '/tambah-transaksi',
-                        extra: activeDuit.ledgerKey,
-                      ),
+                    action: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (_offset < 0) ...[
+                          PrimaryButton(
+                            text: 'Kembali ke Periode Berjalan',
+                            width: 240,
+                            onPressed: _resetToCurrent,
+                          ),
+                          if (latestAvailableDate != null) ...[
+                            const SizedBox(height: 8),
+                            TextButton.icon(
+                              onPressed: () {
+                                final now = DateTime.now();
+                                final today = DateTime(now.year, now.month, now.day);
+                                final targetDay = DateTime(latestAvailableDate!.year, latestAvailableDate.month, latestAvailableDate.day);
+                                int computedOffset = 0;
+                                if (filter == HistoryFilter.daily) {
+                                  computedOffset = targetDay.difference(today).inDays;
+                                } else if (filter == HistoryFilter.weekly) {
+                                  final nowMonday = today.subtract(Duration(days: today.weekday - 1));
+                                  final tMonday = targetDay.subtract(Duration(days: targetDay.weekday - 1));
+                                  computedOffset = (tMonday.difference(nowMonday).inDays / 7).round();
+                                } else if (filter == HistoryFilter.monthly) {
+                                  computedOffset = (latestAvailableDate.year - now.year) * 12 + (latestAvailableDate.month - now.month);
+                                }
+                                if (computedOffset > 0) computedOffset = 0;
+                                setState(() {
+                                  _offset = computedOffset;
+                                  _currentAnchor = latestAvailableDate!;
+                                });
+                              },
+                              icon: const Icon(Icons.history_rounded, size: 16),
+                              label: const Text('Lihat Periode Berisi Data'),
+                            ),
+                          ],
+                        ] else ...[
+                          PrimaryButton(
+                            text: 'Tambah Transaksi',
+                            width: 220,
+                            onPressed: () => context.push(
+                              '/tambah-transaksi',
+                              extra: activeDuit.ledgerKey,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   );
+                }
+
+                // Hitung total ringkasan periode
+                int periodIncome = 0;
+                int periodExpense = 0;
+                for (final item in filteredList) {
+                  if (item.type == 'income') {
+                    periodIncome += item.amount;
+                  } else {
+                    periodExpense += item.amount;
+                  }
                 }
 
                 // Kelompokkan per tanggal: Key = "yyyy-MM-dd"
@@ -258,14 +408,118 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                 final sortedKeys = grouped.keys.toList()
                   ..sort((a, b) => b.compareTo(a));
 
+                // Lazy load / Paging limit untuk daftar jika 'all' atau data banyak
+                final displayKeys = sortedKeys.take(_pagingLimit).toList();
+                final hasMore = sortedKeys.length > displayKeys.length;
+
                 return ListView.builder(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16.0,
                     vertical: 8.0,
                   ),
-                  itemCount: sortedKeys.length,
-                  itemBuilder: (context, groupIndex) {
-                    final key = sortedKeys[groupIndex];
+                  itemCount: displayKeys.length + (hasMore ? 2 : 1),
+                  itemBuilder: (context, index) {
+                    // Header Ringkasan Periode di posisi teratas
+                    if (index == 0) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            color: isDark ? AppColors.darkCard : Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Pemasukan Periode',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  MoneyText(
+                                    amount: periodIncome,
+                                    duit: activeDuit.storageKey,
+                                    prefix: '+ ',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.income,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                width: 1,
+                                height: 28,
+                                color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Pengeluaran Periode',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  MoneyText(
+                                    amount: periodExpense,
+                                    duit: activeDuit.storageKey,
+                                    prefix: '- ',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.expense,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+
+                    // Tombol Muat Lebih Banyak jika paging aktif
+                    if (hasMore && index == displayKeys.length + 1) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16.0),
+                        child: Center(
+                          child: OutlinedButton.icon(
+                            onPressed: () {
+                              setState(() {
+                                _pagingLimit += 50;
+                              });
+                            },
+                            icon: const Icon(Icons.expand_more_rounded, size: 18),
+                            label: Text(
+                              'Muat Lebih Banyak (${sortedKeys.length - displayKeys.length} tersisa)',
+                              style: GoogleFonts.plusJakartaSans(
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+
+                    final groupIndex = index - 1;
+                    final key = displayKeys[groupIndex];
                     final groupItems = grouped[key]!;
                     final groupDate = groupItems.first.date;
 
@@ -307,6 +561,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                               ),
                               MoneyText(
                                 amount: netSubtotal.abs(),
+                                duit: activeDuit.storageKey,
                                 prefix: netSubtotal >= 0 ? '+ ' : '- ',
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 13,
@@ -453,11 +708,12 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                                         ],
                                       ),
                                     ),
+                                    const SizedBox(width: 10),
 
                                     // Nominal Transaksi
                                     MoneyText(
                                       amount: item.amount,
-                                      duit: item.ledger,
+                                      duit: activeDuit.storageKey,
                                       prefix: isIncome ? '+ ' : '- ',
                                       style: GoogleFonts.plusJakartaSans(
                                         fontSize: 15,
@@ -467,49 +723,30 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                                             : AppColors.expense,
                                       ),
                                     ),
-                                    const SizedBox(width: 4),
-                                    IconButton(
-                                      icon: Icon(
-                                        Icons.delete_outline_rounded,
-                                        size: 19,
-                                        color: isDark
-                                            ? AppColors.darkTextSecondary
-                                            : AppColors.lightTextSecondary,
-                                      ),
-                                      tooltip: 'Hapus Transaksi',
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(
-                                        minWidth: 28,
-                                        minHeight: 28,
-                                      ),
-                                      onPressed: () =>
-                                          _handleDeleteTransaction(context, item),
-                                    ),
                                   ],
                                 ),
                               ),
                             ),
                           );
                         }),
-                        const SizedBox(height: 8),
                       ],
                     ),
                   );
                 },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, _) => ErrorState(
-                title: 'Gagal Memuat Riwayat',
-                message: 'Terjadi kendala saat mengambil riwayat transaksi. Silakan coba lagi.',
-                onRetry: () => ref.invalidate(transactionsStreamProvider),
-              ),
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, _) => ErrorState(
+              title: 'Gagal Memuat Riwayat',
+              message: 'Terjadi kendala saat mengambil riwayat transaksi. Silakan coba lagi.',
+              onRetry: () => ref.invalidate(transactionsStreamProvider),
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
   Widget _buildFilterTab(
     String label,
@@ -525,6 +762,11 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
           ref
               .read(historyFilterProvider.notifier)
               .setFilter(filterOption.name);
+          setState(() {
+            _offset = 0;
+            _currentAnchor = DateTime.now();
+            _pagingLimit = 50;
+          });
         },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -537,7 +779,7 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
             child: Text(
               label,
               style: GoogleFonts.plusJakartaSans(
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
                 color: isSelected
                     ? AppColors.darkAccent

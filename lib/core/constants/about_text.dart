@@ -4,7 +4,7 @@ class AboutText {
   AboutText._();
 
   static const String appName = 'MyDuitGweh';
-  static const String appVersion = '1.0.0';
+  static const String appVersion = '1.0.1';
   static const String appTagline = 'Pencatat Keuangan Pribadi yang Santai & Mandiri';
 
   static const String appDescription =

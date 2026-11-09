@@ -553,87 +553,90 @@ class _GoalsLedgerScreenState extends ConsumerState<GoalsLedgerScreen> {
                             : AppColors.lightBackground,
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SwitchListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(
-                              'Potong dari catatan lain',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
+                      child: Material(
+                        type: MaterialType.transparency,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SwitchListTile(
+                              contentPadding: EdgeInsets.zero,
+                              title: Text(
+                                'Potong dari catatan lain',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                            ),
-                            subtitle: Text(
-                              deductFromWallet
-                                  ? 'Mengurangi saldo catatan yang dipilih'
-                                  : 'Berdiri sendiri (tanpa mengurangi catatan lain)',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 11,
-                                color: AppColors.lightTextSecondary,
+                              subtitle: Text(
+                                deductFromWallet
+                                    ? 'Mengurangi saldo catatan yang dipilih'
+                                    : 'Berdiri sendiri (tanpa mengurangi catatan lain)',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 11,
+                                  color: AppColors.lightTextSecondary,
+                                ),
                               ),
+                              value: deductFromWallet,
+                              onChanged: (val) {
+                                setModalState(() => deductFromWallet = val);
+                              },
                             ),
-                            value: deductFromWallet,
-                            onChanged: (val) {
-                              setModalState(() => deductFromWallet = val);
-                            },
-                          ),
-                          if (deductFromWallet && allWallets.isNotEmpty) ...[
-                            const SizedBox(height: 8),
-                            Text(
-                              allWallets.length == 1 ? 'Sumber Dana:' : 'Pilih Sumber Dana:',
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
+                            if (deductFromWallet && allWallets.isNotEmpty) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                allWallets.length == 1 ? 'Sumber Dana:' : 'Pilih Sumber Dana:',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 4),
-                            if (allWallets.length == 1)
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                decoration: BoxDecoration(
-                                  color: isDark ? AppColors.darkCard : Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                              const SizedBox(height: 4),
+                              if (allWallets.length == 1)
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? AppColors.darkCard : Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                                    ),
                                   ),
-                                ),
-                                child: Text(
-                                  '${allWallets.first.name} (${allWallets.first.ledger == "daily" ? "Harian" : (allWallets.first.ledger == "balance" ? "Saldo" : "Tabungan")})',
-                                  style: GoogleFonts.plusJakartaSans(
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 13,
+                                  child: Text(
+                                    '${allWallets.first.name} (${allWallets.first.ledger == "daily" ? "Harian" : (allWallets.first.ledger == "balance" ? "Saldo" : "Tabungan")})',
+                                    style: GoogleFonts.plusJakartaSans(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
                                   ),
+                                )
+                              else
+                                DropdownButtonFormField<int>(
+                                  value: selectedSourceWalletId,
+                                  decoration: const InputDecoration(
+                                    isDense: true,
+                                  ),
+                                  items: allWallets.map((w) {
+                                    final ledgerLabel = w.ledger == 'daily'
+                                        ? 'Harian'
+                                        : (w.ledger == 'balance'
+                                            ? 'Saldo'
+                                            : 'Tabungan');
+                                    return DropdownMenuItem<int>(
+                                      value: w.id,
+                                      child: Text('${w.name} ($ledgerLabel)'),
+                                    );
+                                  }).toList(),
+                                  onChanged: (val) {
+                                    if (val != null) {
+                                      setModalState(
+                                          () => selectedSourceWalletId = val);
+                                    }
+                                  },
                                 ),
-                              )
-                            else
-                              DropdownButtonFormField<int>(
-                                value: selectedSourceWalletId,
-                                decoration: const InputDecoration(
-                                  isDense: true,
-                                ),
-                                items: allWallets.map((w) {
-                                  final ledgerLabel = w.ledger == 'daily'
-                                      ? 'Harian'
-                                      : (w.ledger == 'balance'
-                                          ? 'Saldo'
-                                          : 'Tabungan');
-                                  return DropdownMenuItem<int>(
-                                    value: w.id,
-                                    child: Text('${w.name} ($ledgerLabel)'),
-                                  );
-                                }).toList(),
-                                onChanged: (val) {
-                                  if (val != null) {
-                                    setModalState(
-                                        () => selectedSourceWalletId = val);
-                                  }
-                                },
-                              ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),

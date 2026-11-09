@@ -14,8 +14,108 @@ import '../../../core/widgets/widgets.dart';
 import '../../../data/models/transaction_model.dart';
 import '../../../data/repositories/providers.dart';
 
-class BalanceLedgerScreen extends ConsumerWidget {
+class BalanceLedgerScreen extends ConsumerStatefulWidget {
   const BalanceLedgerScreen({super.key});
+
+  @override
+  ConsumerState<BalanceLedgerScreen> createState() => _BalanceLedgerScreenState();
+}
+
+class _BalanceLedgerScreenState extends ConsumerState<BalanceLedgerScreen> {
+  int _offset = 0;
+  DateTime _currentAnchor = DateTime.now();
+  int _pagingLimit = 50;
+
+  void _resetToCurrent() {
+    setState(() {
+      _offset = 0;
+      _currentAnchor = DateTime.now();
+      _pagingLimit = 50;
+    });
+  }
+
+  void _stepPeriod(int delta, HistoryFilter filter) {
+    if (filter == HistoryFilter.all) return;
+    final newOffset = _offset + delta;
+    if (newOffset > 0) return;
+
+    final now = DateTime.now();
+    DateTime newDate;
+    if (filter == HistoryFilter.daily) {
+      newDate = now.add(Duration(days: newOffset));
+    } else if (filter == HistoryFilter.weekly) {
+      newDate = now.add(Duration(days: newOffset * 7));
+    } else {
+      newDate = DateTime(now.year, now.month + newOffset, 1);
+    }
+
+    setState(() {
+      _offset = newOffset;
+      _currentAnchor = newDate;
+      _pagingLimit = 50;
+    });
+  }
+
+  Future<void> _pickDirectDate(HistoryFilter filter) async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _currentAnchor.isAfter(now) ? now : _currentAnchor,
+      firstDate: DateTime(2020),
+      lastDate: now,
+      helpText: filter == HistoryFilter.monthly
+          ? 'Pilih Bulan/Tanggal'
+          : (filter == HistoryFilter.weekly
+              ? 'Pilih Minggu'
+              : 'Pilih Tanggal'),
+      cancelText: 'Batal',
+      confirmText: 'Pilih',
+    );
+
+    if (picked != null) {
+      final today = DateTime(now.year, now.month, now.day);
+      final pickedDay = DateTime(picked.year, picked.month, picked.day);
+
+      int computedOffset = 0;
+      if (filter == HistoryFilter.daily) {
+        computedOffset = pickedDay.difference(today).inDays;
+      } else if (filter == HistoryFilter.weekly) {
+        final nowMonday = today.subtract(Duration(days: today.weekday - 1));
+        final pickedMonday = pickedDay.subtract(Duration(days: pickedDay.weekday - 1));
+        computedOffset = (pickedMonday.difference(nowMonday).inDays / 7).round();
+      } else if (filter == HistoryFilter.monthly) {
+        computedOffset = (picked.year - now.year) * 12 + (picked.month - now.month);
+      }
+
+      if (computedOffset > 0) computedOffset = 0;
+
+      setState(() {
+        _offset = computedOffset;
+        _currentAnchor = picked;
+        _pagingLimit = 50;
+      });
+    }
+  }
+
+  bool _isWithinFilter(DateTime date, HistoryFilter filter) {
+    if (filter == HistoryFilter.all) return true;
+    final target = _currentAnchor;
+    switch (filter) {
+      case HistoryFilter.daily:
+        return date.year == target.year &&
+            date.month == target.month &&
+            date.day == target.day;
+      case HistoryFilter.weekly:
+        final monday = target.subtract(Duration(days: target.weekday - 1));
+        final start = DateTime(monday.year, monday.month, monday.day);
+        final end = DateTime(monday.year, monday.month, monday.day + 6, 23, 59, 59, 999);
+        return !date.isBefore(start) && !date.isAfter(end);
+      case HistoryFilter.monthly:
+        return date.year == target.year && date.month == target.month;
+      case HistoryFilter.all:
+        return true;
+    }
+  }
 
   Future<bool?> _showDeleteTxConfirmation(
     BuildContext context,
@@ -50,7 +150,7 @@ class BalanceLedgerScreen extends ConsumerWidget {
             if (isTransfer) ...[
               const SizedBox(height: 8),
               Text(
-                'Transaksi ini terhubung dengan transfer. Kedua transaksi akan dihapus.',
+                'Transaksi transfer ini memiliki pasangan yang juga akan otomatis dihapus.',
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -62,7 +162,7 @@ class BalanceLedgerScreen extends ConsumerWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
+            onPressed: () => Navigator.pop(ctx, false),
             child: Text(
               'Batal',
               style: GoogleFonts.plusJakartaSans(
@@ -73,13 +173,13 @@ class BalanceLedgerScreen extends ConsumerWidget {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFE57373),
+              backgroundColor: AppColors.expense,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
               ),
             ),
-            onPressed: () => Navigator.of(ctx).pop(true),
+            onPressed: () => Navigator.pop(ctx, true),
             child: Text(
               'Hapus',
               style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
@@ -93,20 +193,20 @@ class BalanceLedgerScreen extends ConsumerWidget {
   Future<void> _handleDeleteTransaction(
     BuildContext context,
     WidgetRef ref,
-    TransactionItem item,
+    TransactionItem tx,
   ) async {
-    final confirmed = await _showDeleteTxConfirmation(context, item);
-    if (confirmed == true && context.mounted) {
-      final repo = ref.read(transactionRepositoryProvider);
-      await repo.deleteTransaction(item.id!);
+    final confirm = await _showDeleteTxConfirmation(context, tx);
+    if (confirm == true && tx.id != null) {
+      final txRepo = ref.read(transactionRepositoryProvider);
+      await txRepo.deleteTransaction(tx.id!);
+      ref.invalidate(ledgerBalanceStreamProvider('balance'));
+      ref.invalidate(transactionsByLedgerStreamProvider('balance'));
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Transaksi dihapus',
-              style: GoogleFonts.plusJakartaSans(
-                fontWeight: FontWeight.w600,
-              ),
+              'Transaksi berhasil dihapus',
+              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
             ),
             backgroundColor: AppColors.darkAccent,
             behavior: SnackBarBehavior.floating,
@@ -118,17 +218,20 @@ class BalanceLedgerScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final balanceAsync = ref.watch(ledgerBalanceStreamProvider('balance'));
     final transactionsAsync =
         ref.watch(transactionsByLedgerStreamProvider('balance'));
     final categoriesAsync = ref.watch(categoriesStreamProvider);
-    final txRepo = ref.read(transactionRepositoryProvider);
 
-    final now = DateTime.now();
-    final startOfMonth = DateTime(now.year, now.month, 1);
-    final endOfMonth = DateTime(now.year, now.month + 1, 0, 23, 59, 59);
+    final filterStr = ref.watch(historyFilterProvider);
+    final filter = switch (filterStr) {
+      'weekly' => HistoryFilter.weekly,
+      'monthly' => HistoryFilter.monthly,
+      'all' => HistoryFilter.all,
+      _ => HistoryFilter.daily,
+    };
 
     return Scaffold(
       appBar: AppBar(
@@ -164,7 +267,42 @@ class BalanceLedgerScreen extends ConsumerWidget {
             parent: BouncingScrollPhysics(),
           ),
           slivers: [
-            // Ringkasan Atas
+            // Filter Selector Tab
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.darkCard : const Color(0xFFF2ECE1),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Row(
+                    children: [
+                      _buildFilterTab('Harian', HistoryFilter.daily, filter),
+                      _buildFilterTab('Mingguan', HistoryFilter.weekly, filter),
+                      _buildFilterTab('Bulanan', HistoryFilter.monthly, filter),
+                      _buildFilterTab('Semua', HistoryFilter.all, filter),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // Bar Navigasi Periode
+            SliverToBoxAdapter(
+              child: PeriodNavigator(
+                filter: filter,
+                selectedDate: _currentAnchor,
+                offset: _offset,
+                onPrevious: () => _stepPeriod(-1, filter),
+                onNext: _offset < 0 ? () => _stepPeriod(1, filter) : null,
+                onResetToCurrent: _resetToCurrent,
+                onTapPeriod: filter != HistoryFilter.all ? () => _pickDirectDate(filter) : null,
+              ),
+            ),
+
+            // Kartu Ringkasan Saldo
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -174,20 +312,8 @@ class BalanceLedgerScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: AppColors.duitSaldo.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(
-                              Icons.account_balance_rounded,
-                              color: AppColors.duitSaldo,
-                              size: 20,
-                            ),
-                          ),
-                          const SizedBox(width: 10),
                           Expanded(
                             child: Text(
                               'Total Duit Saldo',
@@ -250,42 +376,33 @@ class BalanceLedgerScreen extends ConsumerWidget {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: balanceAsync.when(
-                          data: (bal) => AnimatedRupiahCounter(
-                            amount: bal,
-                            duit: 'saldo',
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 26,
-                              fontWeight: FontWeight.w800,
-                              color: isDark ? Colors.white : AppColors.darkAccent,
-                            ),
-                          ),
-                          loading: () => const Text('Memuat...'),
-                          error: (e, _) => const Text('Rp 0'),
+                      AnimatedCurrency(
+                        amount: balanceAsync.value ?? 0,
+                        duit: 'saldo',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w800,
+                          color: isDark
+                              ? Colors.white
+                              : AppColors.darkAccent,
                         ),
                       ),
                       const SizedBox(height: 16),
                       const Divider(height: 1),
                       const SizedBox(height: 14),
-                      FutureBuilder<List<int>>(
-                        future: Future.wait([
-                          txRepo.getTotalIncomeByDateRange(
-                            startOfMonth,
-                            endOfMonth,
-                            ledger: 'balance',
-                          ),
-                          txRepo.getTotalExpenseByDateRange(
-                            startOfMonth,
-                            endOfMonth,
-                            ledger: 'balance',
-                          ),
-                        ]),
-                        builder: (context, snapshot) {
-                          final inc = snapshot.data?[0] ?? 0;
-                          final exp = snapshot.data?[1] ?? 0;
+
+                      // Ringkasan Masuk & Keluar mengikuti periode yang dilihat
+                      Builder(
+                        builder: (context) {
+                          final allTxs = transactionsAsync.value ?? [];
+                          final filtered = allTxs.where((t) => _isWithinFilter(t.date, filter)).toList();
+                          int inc = 0;
+                          int exp = 0;
+                          for (final t in filtered) {
+                            if (t.type == 'income') inc += t.amount;
+                            if (t.type == 'expense') exp += t.amount;
+                          }
+
                           return Row(
                             children: [
                               Expanded(
@@ -309,7 +426,7 @@ class BalanceLedgerScreen extends ConsumerWidget {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            'Pemasukan Bulan Ini',
+                                            'Pemasukan Periode',
                                             style: GoogleFonts.plusJakartaSans(
                                               fontSize: 11,
                                               color: isDark
@@ -355,7 +472,7 @@ class BalanceLedgerScreen extends ConsumerWidget {
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            'Pengeluaran Bulan Ini',
+                                            'Pengeluaran Periode',
                                             style: GoogleFonts.plusJakartaSans(
                                               fontSize: 11,
                                               color: isDark
@@ -389,11 +506,10 @@ class BalanceLedgerScreen extends ConsumerWidget {
               ),
             ),
 
-            // Header Riwayat Duit Saldo
+            // Header Daftar Transaksi
             SliverToBoxAdapter(
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -415,31 +531,35 @@ class BalanceLedgerScreen extends ConsumerWidget {
               ),
             ),
 
-            // Daftar Transaksi Saldo
+            // Daftar Transaksi
             transactionsAsync.when(
               loading: () => const SliverFillRemaining(
                 child: Center(child: CircularProgressIndicator()),
               ),
               error: (err, _) => SliverFillRemaining(
                 child: ErrorState(
-                  message: 'Gagal memuat duit saldo: $err',
+                  message: 'Gagal memuat transaksi: $err',
                   onRetry: () => ref.invalidate(
                     transactionsByLedgerStreamProvider('balance'),
                   ),
                 ),
               ),
               data: (txList) {
-                if (txList.isEmpty) {
+                final filtered = txList.where((t) => _isWithinFilter(t.date, filter)).toList();
+
+                if (filtered.isEmpty) {
                   return SliverFillRemaining(
                     hasScrollBody: false,
                     child: EmptyState(
                       icon: Icons.account_balance_wallet_outlined,
-                      title: 'Belum Ada Transaksi Duit Saldo',
-                      message:
-                          'Mulai catat transaksi uang tunai, bank, atau dompet digital Anda.',
-                      buttonText: 'Tambah Transaksi Pertama',
-                      onButtonPressed: () =>
-                          context.push('/tambah-transaksi', extra: 'balance'),
+                      title: 'Belum Ada Transaksi di Periode Ini',
+                      message: _offset < 0
+                          ? 'Tidak ada catatan transaksi Duit Saldo pada periode ini.'
+                          : 'Mulai catat transaksi uang tunai, bank, atau dompet digital Anda.',
+                      buttonText: _offset < 0 ? 'Kembali ke Periode Berjalan' : 'Tambah Transaksi Pertama',
+                      onButtonPressed: _offset < 0
+                          ? _resetToCurrent
+                          : () => context.push('/tambah-transaksi', extra: 'balance'),
                     ),
                   );
                 }
@@ -447,8 +567,11 @@ class BalanceLedgerScreen extends ConsumerWidget {
                 final categories = categoriesAsync.value ?? [];
                 final categoryMap = {for (final c in categories) c.id: c};
 
-                final sorted = txList.toList()
+                final sorted = filtered.toList()
                   ..sort((a, b) => b.date.compareTo(a.date));
+
+                final displayList = sorted.take(_pagingLimit).toList();
+                final hasMore = sorted.length > displayList.length;
 
                 return SliverPadding(
                   padding: const EdgeInsets.only(
@@ -459,7 +582,28 @@ class BalanceLedgerScreen extends ConsumerWidget {
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
-                        final tx = sorted[index];
+                        if (hasMore && index == displayList.length) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 12.0),
+                            child: Center(
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  setState(() => _pagingLimit += 50);
+                                },
+                                icon: const Icon(Icons.expand_more_rounded, size: 16),
+                                label: Text(
+                                  'Muat Lebih Banyak (${sorted.length - displayList.length} tersisa)',
+                                  style: GoogleFonts.plusJakartaSans(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }
+
+                        final tx = displayList[index];
                         final cat = categoryMap[tx.categoryId];
                         final isExpense = tx.type == 'expense';
                         final isIncome = tx.type == 'income';
@@ -554,13 +698,76 @@ class BalanceLedgerScreen extends ConsumerWidget {
                           ),
                         );
                       },
-                      childCount: sorted.length,
+                      childCount: displayList.length + (hasMore ? 1 : 0),
                     ),
                   ),
                 );
               },
             ),
           ],
+        ),
+      ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkCard : Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: PrimaryButton(
+            text: '+ Catat Transaksi Saldo',
+            onPressed: () => context.push('/tambah-transaksi', extra: 'balance'),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterTab(
+    String label,
+    HistoryFilter filterOption,
+    HistoryFilter currentFilter,
+  ) {
+    final isSelected = currentFilter == filterOption;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          ref.read(historyFilterProvider.notifier).setFilter(filterOption.name);
+          setState(() {
+            _offset = 0;
+            _currentAnchor = DateTime.now();
+            _pagingLimit = 50;
+          });
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.primary : Colors.transparent,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Center(
+            child: Text(
+              label,
+              style: GoogleFonts.plusJakartaSans(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                color: isSelected
+                    ? AppColors.darkAccent
+                    : (isDark
+                          ? AppColors.darkTextSecondary
+                          : AppColors.lightTextSecondary),
+              ),
+            ),
+          ),
         ),
       ),
     );

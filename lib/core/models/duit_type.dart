@@ -44,6 +44,21 @@ class DuitSelection {
     }
   }
 
+  String get storageKey {
+    switch (type) {
+      case DuitType.harian:
+        return 'utama';
+      case DuitType.saldo:
+        return 'saldo';
+      case DuitType.tabungan:
+        return 'tabungan';
+      case DuitType.pencapaian:
+        return 'pencapaian';
+      case null:
+        return 'semua';
+    }
+  }
+
   String get chipLabel {
     switch (type) {
       case DuitType.harian:

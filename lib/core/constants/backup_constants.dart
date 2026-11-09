@@ -1,3 +1,5 @@
+import 'about_text.dart';
+
 /// Konstanta versi dan konfigurasi format cadangan (backup) MyDuitGweh.
 ///
 /// ATURAN PEMELIHARAAN (PROJECT.md):
@@ -12,7 +14,7 @@ class BackupConstants {
   static const int currentBackupVersion = 3;
 
   /// Versi aplikasi saat ini
-  static const String currentAppVersion = '1.0.0';
+  static const String currentAppVersion = AboutText.appVersion;
 
   /// Identitas nama aplikasi yang wajib ada di setiap berkas cadangan
   static const String appIdentifier = 'MyDuitGweh';
