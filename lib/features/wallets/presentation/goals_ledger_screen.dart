@@ -12,7 +12,6 @@ import '../../../core/utils/icon_helper.dart';
 import '../../../core/widgets/atur_saldo_sheet.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../data/models/saving_goal_model.dart';
-import '../../../data/models/transaction_model.dart';
 import '../../../data/models/wallet_model.dart';
 import '../../../data/repositories/providers.dart';
 
@@ -24,99 +23,6 @@ class GoalsLedgerScreen extends ConsumerStatefulWidget {
 }
 
 class _GoalsLedgerScreenState extends ConsumerState<GoalsLedgerScreen> {
-  Future<bool?> _showDeleteTxConfirmation(TransactionItem item) async {
-    final isTransfer = item.transferPartnerId != null ||
-        (item.note != null &&
-            (item.note!.startsWith('Transfer') ||
-                item.note!.contains('Transfer') ||
-                item.note!.startsWith('Dari ') ||
-                item.note!.startsWith('Ke ')));
-
-    return showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Hapus Transaksi?',
-          style: GoogleFonts.plusJakartaSans(
-            fontWeight: FontWeight.w700,
-            fontSize: 18,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Hapus transaksi ini? Saldo akan dihitung ulang.',
-              style: GoogleFonts.plusJakartaSans(fontSize: 14),
-            ),
-            if (isTransfer) ...[
-              const SizedBox(height: 8),
-              Text(
-                'Transaksi ini terhubung dengan transfer. Kedua transaksi akan dihapus.',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.expense,
-                ),
-              ),
-            ],
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(
-              'Batal',
-              style: GoogleFonts.plusJakartaSans(
-                fontWeight: FontWeight.w600,
-                color: AppColors.lightTextSecondary,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFE57373),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(
-              'Hapus',
-              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _handleDeleteTransaction(TransactionItem item) async {
-    final confirmed = await _showDeleteTxConfirmation(item);
-    if (confirmed == true && mounted) {
-      final repo = ref.read(transactionRepositoryProvider);
-      await repo.deleteTransaction(item.id!);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Transaksi dihapus',
-              style: GoogleFonts.plusJakartaSans(
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            backgroundColor: AppColors.darkAccent,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    }
-  }
-
   // Daftar pilihan ikon target pencapaian
   static const List<Map<String, dynamic>> _iconOptions = [
     {'name': 'phone_android_rounded', 'label': 'Handphone'},
@@ -464,16 +370,32 @@ class _GoalsLedgerScreenState extends ConsumerState<GoalsLedgerScreen> {
   }
 
   // Dialog Setor ke Target (bisa potong dompet atau mandiri)
-  Future<void> _showDepositToGoalDialog(
-    SavingGoalItem goal,
-    List<WalletItem> allWallets,
-  ) async {
+  Future<void> _showDepositToGoalDialog({
+    SavingGoalItem? preselectedGoal,
+    List<SavingGoalItem>? allGoals,
+    List<WalletItem>? allWallets,
+  }) async {
     final depositCtrl = TextEditingController();
     final noteCtrl = TextEditingController();
+    DateTime selectedDate = DateTime.now();
     bool deductFromWallet = false;
-    int? selectedSourceWalletId =
-        allWallets.isNotEmpty ? allWallets.first.id : null;
+    final wallets = allWallets ?? [];
+    int? selectedSourceWalletId = wallets.isNotEmpty ? wallets.first.id : null;
+    final goalsList = allGoals ?? (preselectedGoal != null ? [preselectedGoal] : <SavingGoalItem>[]);
+    int? selectedGoalId = preselectedGoal?.id ?? (goalsList.isNotEmpty ? goalsList.first.id : null);
     String? errorText;
+
+    if (goalsList.isEmpty && preselectedGoal == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Buat pencapaian terlebih dahulu sebelum menyetor.'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
 
     await showModalBottomSheet(
       context: context,
@@ -483,6 +405,11 @@ class _GoalsLedgerScreenState extends ConsumerState<GoalsLedgerScreen> {
         final isDark = Theme.of(ctx).brightness == Brightness.dark;
         return StatefulBuilder(
           builder: (context, setModalState) {
+            final activeGoal = goalsList.firstWhere(
+              (g) => g.id == selectedGoalId,
+              orElse: () => goalsList.first,
+            );
+
             return Container(
               padding: EdgeInsets.only(
                 top: 24,
@@ -516,15 +443,64 @@ class _GoalsLedgerScreenState extends ConsumerState<GoalsLedgerScreen> {
                         ),
                       ],
                     ),
-                    Text(
-                      'Target: ${goal.name}',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 14,
-                        color: AppColors.lightTextSecondary,
-                        fontWeight: FontWeight.w600,
+                    const SizedBox(height: 8),
+
+                    // Pemilih Target: jika preselected / hanya 1 target, tampilkan label biasa tanpa dropdown
+                    if (preselectedGoal != null || goalsList.length <= 1) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.darkBackground : const Color(0xFFF6F2EB),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.emoji_events_rounded,
+                              size: 18,
+                              color: AppColors.duitPencapaian,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Target: ${activeGoal.name}',
+                                style: GoogleFonts.plusJakartaSans(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
+                    ] else ...[
+                      Text(
+                        'Pilih Target:',
+                        style: GoogleFonts.plusJakartaSans(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      DropdownButtonFormField<int>(
+                        value: selectedGoalId,
+                        decoration: const InputDecoration(isDense: true),
+                        items: goalsList.map((g) {
+                          return DropdownMenuItem<int>(
+                            value: g.id,
+                            child: Text(g.name),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setModalState(() => selectedGoalId = val);
+                          }
+                        },
+                      ),
+                    ],
                     const SizedBox(height: 16),
+
                     Text(
                       'Nominal Setoran',
                       style: GoogleFonts.plusJakartaSans(
@@ -543,7 +519,44 @@ class _GoalsLedgerScreenState extends ConsumerState<GoalsLedgerScreen> {
                         hintText: '0',
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
+
+                    // Pemilih Tanggal Setor
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Tanggal Setoran:',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        OutlinedButton.icon(
+                          onPressed: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: selectedDate,
+                              firstDate: DateTime(2020),
+                              lastDate: DateTime.now().add(const Duration(days: 365)),
+                            );
+                            if (picked != null) {
+                              setModalState(() => selectedDate = picked);
+                            }
+                          },
+                          icon: const Icon(Icons.calendar_today_rounded, size: 15),
+                          label: Text(
+                            formatTanggal(selectedDate),
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+
                     // Pilihan Sumber Setoran: Mandiri vs Potong Dompet
                     Container(
                       padding: const EdgeInsets.all(12),
@@ -570,7 +583,7 @@ class _GoalsLedgerScreenState extends ConsumerState<GoalsLedgerScreen> {
                               subtitle: Text(
                                 deductFromWallet
                                     ? 'Mengurangi saldo catatan yang dipilih'
-                                    : 'Berdiri sendiri (tanpa mengurangi catatan lain)',
+                                    : 'Setoran mandiri (tanpa mengurangi catatan lain)',
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 11,
                                   color: AppColors.lightTextSecondary,
@@ -581,17 +594,17 @@ class _GoalsLedgerScreenState extends ConsumerState<GoalsLedgerScreen> {
                                 setModalState(() => deductFromWallet = val);
                               },
                             ),
-                            if (deductFromWallet && allWallets.isNotEmpty) ...[
+                            if (deductFromWallet && wallets.isNotEmpty) ...[
                               const SizedBox(height: 8),
                               Text(
-                                allWallets.length == 1 ? 'Sumber Dana:' : 'Pilih Sumber Dana:',
+                                wallets.length == 1 ? 'Sumber Dana:' : 'Pilih Sumber Dana:',
                                 style: GoogleFonts.plusJakartaSans(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
                               const SizedBox(height: 4),
-                              if (allWallets.length == 1)
+                              if (wallets.length == 1)
                                 Container(
                                   width: double.infinity,
                                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -603,7 +616,7 @@ class _GoalsLedgerScreenState extends ConsumerState<GoalsLedgerScreen> {
                                     ),
                                   ),
                                   child: Text(
-                                    '${allWallets.first.name} (${allWallets.first.ledger == "daily" ? "Harian" : (allWallets.first.ledger == "balance" ? "Saldo" : "Tabungan")})',
+                                    '${wallets.first.name} (${wallets.first.ledger == "daily" ? "Harian" : (wallets.first.ledger == "balance" ? "Saldo" : "Tabungan")})',
                                     style: GoogleFonts.plusJakartaSans(
                                       fontWeight: FontWeight.w600,
                                       fontSize: 13,
@@ -616,7 +629,7 @@ class _GoalsLedgerScreenState extends ConsumerState<GoalsLedgerScreen> {
                                   decoration: const InputDecoration(
                                     isDense: true,
                                   ),
-                                  items: allWallets.map((w) {
+                                  items: wallets.map((w) {
                                     final ledgerLabel = w.ledger == 'daily'
                                         ? 'Harian'
                                         : (w.ledger == 'balance'
@@ -639,7 +652,7 @@ class _GoalsLedgerScreenState extends ConsumerState<GoalsLedgerScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     Text(
                       'Catatan (Opsional)',
                       style: GoogleFonts.plusJakartaSans(
@@ -664,7 +677,7 @@ class _GoalsLedgerScreenState extends ConsumerState<GoalsLedgerScreen> {
                         ),
                       ),
                     ],
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 20),
                     PrimaryButton(
                       text: 'Konfirmasi Setoran',
                       onPressed: () async {
@@ -678,15 +691,16 @@ class _GoalsLedgerScreenState extends ConsumerState<GoalsLedgerScreen> {
 
                         final txRepo = ref.read(transactionRepositoryProvider);
                         final note = noteCtrl.text.trim().isEmpty
-                            ? 'Setoran ke ${goal.name}'
+                            ? 'Setoran ke ${activeGoal.name}'
                             : noteCtrl.text.trim();
 
                         await txRepo.depositToGoal(
-                          goalId: goal.id!,
+                          goalId: activeGoal.id!,
                           amount: amount,
                           sourceWalletId:
                               deductFromWallet ? selectedSourceWalletId : null,
                           note: note,
+                          date: selectedDate,
                         );
 
                         if (ctx.mounted) {
@@ -694,7 +708,7 @@ class _GoalsLedgerScreenState extends ConsumerState<GoalsLedgerScreen> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
-                                'Berhasil menyetor ${formatRupiah(amount)} ke target "${goal.name}"',
+                                'Berhasil menyetor ${formatRupiah(amount)} ke target "${activeGoal.name}"',
                               ),
                               behavior: SnackBarBehavior.floating,
                               backgroundColor: AppColors.darkAccent,
@@ -708,6 +722,100 @@ class _GoalsLedgerScreenState extends ConsumerState<GoalsLedgerScreen> {
               ),
             );
           },
+        );
+      },
+    );
+  }
+
+  // Lembar pilihan aksi tombol "+" (Setor vs Buat Target)
+  Future<void> _showAddActionSheet(
+    List<SavingGoalItem> goals,
+    List<WalletItem> allWallets,
+  ) async {
+    if (goals.isEmpty) {
+      _showGoalDialog();
+      return;
+    }
+
+    await showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Aktivitas Duit Pencapaian',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.income.withOpacity(0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.add_circle_outline_rounded,
+                      color: AppColors.income,
+                    ),
+                  ),
+                  title: Text(
+                    'Setor ke Target',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  subtitle: const Text(
+                    'Menambah tabungan ke target impian Anda',
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _showDepositToGoalDialog(
+                      allGoals: goals,
+                      allWallets: allWallets,
+                    );
+                  },
+                ),
+                const Divider(),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppColors.duitPencapaian.withOpacity(0.15),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.flag_rounded,
+                      color: AppColors.duitPencapaian,
+                    ),
+                  ),
+                  title: Text(
+                    'Buat Target Baru',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  subtitle: const Text(
+                    'Tentukan impian atau barang baru yang ingin dicapai',
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _showGoalDialog();
+                  },
+                ),
+              ],
+            ),
+          ),
         );
       },
     );
@@ -802,9 +910,12 @@ class _GoalsLedgerScreenState extends ConsumerState<GoalsLedgerScreen> {
             },
           ),
           IconButton(
-            tooltip: 'Tambah Target',
+            tooltip: 'Tambah / Setor',
             icon: const Icon(Icons.add_circle_outline_rounded),
-            onPressed: () => _showGoalDialog(),
+            onPressed: () => _showAddActionSheet(
+              goalsAsync.value ?? [],
+              walletsAsync.value ?? [],
+            ),
           ),
         ],
       ),
@@ -1205,8 +1316,9 @@ Row(
                                       ),
                                     ),
                                     onPressed: () => _showDepositToGoalDialog(
-                                      g,
-                                      allWallets,
+                                      preselectedGoal: g,
+                                      allGoals: goals,
+                                      allWallets: allWallets,
                                     ),
                                     icon: const Icon(Icons.add_rounded, size: 16),
                                     label: const Text('Setor'),
@@ -1290,84 +1402,13 @@ Row(
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
                         final tx = sorted[index];
+                        final goalMap = {for (final g in goals) g.id: g};
+                        final txGoal =
+                            tx.goalId != null ? goalMap[tx.goalId] : null;
 
-                        return AppCard(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          padding: const EdgeInsets.all(14),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF59E0B)
-                                      .withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: const Icon(
-                                  Icons.emoji_events_rounded,
-                                  color: Color(0xFFF59E0B),
-                                  size: 22,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      tx.note?.isNotEmpty == true
-                                          ? tx.note!
-                                          : 'Setoran Target',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 3),
-                                    Text(
-                                      formatTanggal(tx.date),
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 11,
-                                        color: isDark
-                                            ? AppColors.darkTextSecondary
-                                            : AppColors.lightTextSecondary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              MoneyText(
-                                amount: tx.amount,
-                                duit: 'pencapaian',
-                                prefix: '+',
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 14,
-                                  color: AppColors.income,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              IconButton(
-                                icon: Icon(
-                                  Icons.delete_outline_rounded,
-                                  size: 19,
-                                  color: isDark
-                                      ? AppColors.darkTextSecondary
-                                      : AppColors.lightTextSecondary,
-                                ),
-                                tooltip: 'Hapus Transaksi',
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(
-                                  minWidth: 28,
-                                  minHeight: 28,
-                                ),
-                                onPressed: () => _handleDeleteTransaction(tx),
-                              ),
-                            ],
-                          ),
+                        return TransactionListItem(
+                          transaction: tx,
+                          goal: txGoal,
                         );
                       },
                       childCount: sorted.length,

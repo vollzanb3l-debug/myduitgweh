@@ -6,9 +6,9 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/providers/app_state_provider.dart';
 import '../../../core/utils/formatters.dart';
-import '../../../core/utils/icon_helper.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../data/models/category_model.dart';
+import '../../../data/models/saving_goal_model.dart';
 import '../../../data/models/transaction_model.dart';
 import '../../../data/repositories/providers.dart';
 
@@ -138,104 +138,13 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     }
   }
 
-  Future<bool?> _showDeleteConfirmation(
-    BuildContext context,
-    TransactionItem item,
-  ) async {
-    final isTransfer = item.transferPartnerId != null ||
-        (item.note != null &&
-            (item.note!.startsWith('Transfer') ||
-                item.note!.contains('Transfer') ||
-                item.note!.startsWith('Dari ') ||
-                item.note!.startsWith('Ke ')));
-
-    return showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Hapus Transaksi?',
-          style: GoogleFonts.plusJakartaSans(
-            fontWeight: FontWeight.w700,
-            fontSize: 18,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Hapus transaksi ini? Saldo akan dihitung ulang.',
-              style: GoogleFonts.plusJakartaSans(fontSize: 14),
-            ),
-            if (isTransfer) ...[
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.expense.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.info_outline_rounded,
-                      size: 18,
-                      color: AppColors.expense,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Pasangan transaksi transfer ini juga akan otomatis dihapus.',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 12,
-                          color: AppColors.expense,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(
-              'Batal',
-              style: GoogleFonts.plusJakartaSans(
-                fontWeight: FontWeight.w600,
-                color: AppColors.lightTextSecondary,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.expense,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              'Hapus',
-              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final transactionsAsync = ref.watch(transactionsStreamProvider);
     final categoriesAsync = ref.watch(categoriesStreamProvider);
+    final goalsAsync = ref.watch(savingGoalsStreamProvider);
 
     // Siapkan map categoryId -> CategoryItem
     final categoryMap = <int, CategoryItem>{};
@@ -243,6 +152,15 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
       for (final cat in categories) {
         if (cat.id != null) {
           categoryMap[cat.id!] = cat;
+        }
+      }
+    });
+
+    final goalMap = <int, SavingGoalItem>{};
+    goalsAsync.whenData((goals) {
+      for (final g in goals) {
+        if (g.id != null) {
+          goalMap[g.id!] = g;
         }
       }
     });
@@ -578,155 +496,18 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                         // Item-item Transaksi di Tanggal Tersebut
                         ...groupItems.map((item) {
                           final category = categoryMap[item.categoryId];
-                          final catName = category?.name ?? 'Umum';
-                          final catIcon = category != null
-                              ? IconHelper.getIconData(category.icon)
-                              : Icons.receipt_rounded;
-                          final catColor = category != null
-                              ? IconHelper.parseColor(category.colorHex)
-                              : AppColors.primary;
-                          final isIncome = item.type == 'income';
+                          final goal = item.goalId != null ? goalMap[item.goalId] : null;
 
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 10.0),
-                            child: Dismissible(
-                              key: ValueKey('tx_${item.id}'),
-                              direction: DismissDirection.endToStart,
-                              confirmDismiss: (direction) =>
-                                  _showDeleteConfirmation(context, item),
-                              onDismissed: (direction) async {
-                                final repo = ref.read(
-                                  transactionRepositoryProvider,
-                                );
-                                await repo.deleteTransaction(item.id!);
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'Transaksi dihapus',
-                                        style: GoogleFonts.plusJakartaSans(
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                      backgroundColor: AppColors.darkAccent,
-                                      behavior: SnackBarBehavior.floating,
-                                      duration: const Duration(seconds: 2),
-                                    ),
-                                  );
-                                }
-                              },
-                              background: Container(
-                                alignment: Alignment.centerRight,
-                                padding: const EdgeInsets.only(right: 20),
-                                decoration: BoxDecoration(
-                                  color: AppColors.expense,
-                                  borderRadius: BorderRadius.circular(18),
-                                ),
-                                child: const Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
-                                  children: [
-                                    Icon(
-                                      Icons.delete_outline_rounded,
-                                      color: Colors.white,
-                                      size: 24,
-                                    ),
-                                    SizedBox(width: 8),
-                                    Text(
-                                      'Hapus',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              child: AppCard(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 12,
-                                ),
-                                onTap: () {
-                                  // Ketuk untuk edit transaksi
-                                  context.push(
-                                    '/tambah-transaksi',
-                                    extra: item,
-                                  );
-                                },
-                                child: Row(
-                                  children: [
-                                    // Ikon Kategori
-                                    Container(
-                                      width: 44,
-                                      height: 44,
-                                      decoration: BoxDecoration(
-                                        color: catColor.withOpacity(0.15),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        catIcon,
-                                        color: catColor,
-                                        size: 22,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 14),
-
-                                    // Nama Kategori & Catatan
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            catName,
-                                            style: GoogleFonts.plusJakartaSans(
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.w700,
-                                              color: isDark
-                                                  ? AppColors.darkTextPrimary
-                                                  : AppColors.lightTextPrimary,
-                                            ),
-                                          ),
-                                          if (item.note != null &&
-                                              item.note!.isNotEmpty) ...[
-                                            const SizedBox(height: 2),
-                                            Text(
-                                              item.note!,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: GoogleFonts.plusJakartaSans(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w500,
-                                                color: isDark
-                                                    ? AppColors
-                                                          .darkTextSecondary
-                                                    : AppColors
-                                                          .lightTextSecondary,
-                                              ),
-                                            ),
-                                          ],
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-
-                                    // Nominal Transaksi
-                                    MoneyText(
-                                      amount: item.amount,
-                                      duit: activeDuit.storageKey,
-                                      prefix: isIncome ? '+ ' : '- ',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w700,
-                                        color: isIncome
-                                            ? AppColors.income
-                                            : AppColors.expense,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
+                          return TransactionListItem(
+                            transaction: item,
+                            category: category,
+                            goal: goal,
+                            onTap: () {
+                              context.push(
+                                '/tambah-transaksi',
+                                extra: item,
+                              );
+                            },
                           );
                         }),
                       ],

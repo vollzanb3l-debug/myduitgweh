@@ -7,11 +7,8 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_labels.dart';
 import '../../../core/models/duit_type.dart';
 import '../../../core/providers/app_state_provider.dart';
-import '../../../core/utils/formatters.dart';
-import '../../../core/utils/icon_helper.dart';
 import '../../../core/widgets/atur_saldo_sheet.dart';
 import '../../../core/widgets/widgets.dart';
-import '../../../data/models/transaction_model.dart';
 import '../../../data/repositories/providers.dart';
 
 class BalanceLedgerScreen extends ConsumerStatefulWidget {
@@ -114,106 +111,6 @@ class _BalanceLedgerScreenState extends ConsumerState<BalanceLedgerScreen> {
         return date.year == target.year && date.month == target.month;
       case HistoryFilter.all:
         return true;
-    }
-  }
-
-  Future<bool?> _showDeleteTxConfirmation(
-    BuildContext context,
-    TransactionItem item,
-  ) async {
-    final isTransfer = item.transferPartnerId != null ||
-        (item.note != null &&
-            (item.note!.startsWith('Transfer') ||
-                item.note!.contains('Transfer') ||
-                item.note!.startsWith('Dari ') ||
-                item.note!.startsWith('Ke ')));
-
-    return showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Hapus Transaksi?',
-          style: GoogleFonts.plusJakartaSans(
-            fontWeight: FontWeight.w700,
-            fontSize: 18,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Hapus transaksi ini? Saldo akan dihitung ulang.',
-              style: GoogleFonts.plusJakartaSans(fontSize: 14),
-            ),
-            if (isTransfer) ...[
-              const SizedBox(height: 8),
-              Text(
-                'Transaksi transfer ini memiliki pasangan yang juga akan otomatis dihapus.',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.expense,
-                ),
-              ),
-            ],
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(
-              'Batal',
-              style: GoogleFonts.plusJakartaSans(
-                fontWeight: FontWeight.w600,
-                color: AppColors.lightTextSecondary,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.expense,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              'Hapus',
-              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _handleDeleteTransaction(
-    BuildContext context,
-    WidgetRef ref,
-    TransactionItem tx,
-  ) async {
-    final confirm = await _showDeleteTxConfirmation(context, tx);
-    if (confirm == true && tx.id != null) {
-      final txRepo = ref.read(transactionRepositoryProvider);
-      await txRepo.deleteTransaction(tx.id!);
-      ref.invalidate(ledgerBalanceStreamProvider('balance'));
-      ref.invalidate(transactionsByLedgerStreamProvider('balance'));
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Transaksi berhasil dihapus',
-              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
-            ),
-            backgroundColor: AppColors.darkAccent,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
     }
   }
 
@@ -605,97 +502,12 @@ class _BalanceLedgerScreenState extends ConsumerState<BalanceLedgerScreen> {
 
                         final tx = displayList[index];
                         final cat = categoryMap[tx.categoryId];
-                        final isExpense = tx.type == 'expense';
-                        final isIncome = tx.type == 'income';
 
-                        final iconData = cat != null
-                            ? IconHelper.getIconData(cat.icon)
-                            : (isExpense
-                                ? Icons.arrow_upward_rounded
-                                : Icons.arrow_downward_rounded);
-                        final color = isExpense
-                            ? AppColors.expense
-                            : (isIncome ? AppColors.income : const Color(0xFF6366F1));
-
-                        return AppCard(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          padding: const EdgeInsets.all(14),
+                        return TransactionListItem(
+                          transaction: tx,
+                          category: cat,
                           onTap: () =>
                               context.push('/tambah-transaksi', extra: tx),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  color: color.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Icon(iconData, color: color, size: 22),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      cat?.name ?? 'Kategori #${tx.categoryId}',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      tx.note != null && tx.note!.isNotEmpty
-                                          ? '${tx.note} • ${formatTanggal(tx.date)}'
-                                          : formatTanggal(tx.date),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 12,
-                                        color: isDark
-                                            ? AppColors.darkTextSecondary
-                                            : AppColors.lightTextSecondary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  MoneyText(
-                                    amount: tx.amount,
-                                    duit: 'saldo',
-                                    style: GoogleFonts.plusJakartaSans(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 14,
-                                      color: color,
-                                    ),
-                                    prefix: isExpense ? '- ' : '+ ',
-                                  ),
-                                  const SizedBox(height: 4),
-                                  GestureDetector(
-                                    onTap: () => _handleDeleteTransaction(
-                                      context,
-                                      ref,
-                                      tx,
-                                    ),
-                                    child: const Padding(
-                                      padding: EdgeInsets.all(2.0),
-                                      child: Icon(
-                                        Icons.delete_outline_rounded,
-                                        size: 16,
-                                        color: Color(0xFFE57373),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
                         );
                       },
                       childCount: displayList.length + (hasMore ? 1 : 0),

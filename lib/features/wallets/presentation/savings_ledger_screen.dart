@@ -7,11 +7,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_labels.dart';
 import '../../../core/models/duit_type.dart';
-import '../../../core/utils/formatters.dart';
-import '../../../core/utils/icon_helper.dart';
 import '../../../core/widgets/atur_saldo_sheet.dart';
 import '../../../core/widgets/widgets.dart';
-import '../../../data/models/transaction_model.dart';
 import '../../../data/repositories/providers.dart';
 
 class SavingsLedgerScreen extends ConsumerStatefulWidget {
@@ -114,106 +111,6 @@ class _SavingsLedgerScreenState extends ConsumerState<SavingsLedgerScreen> {
         return date.year == target.year && date.month == target.month;
       case HistoryFilter.all:
         return true;
-    }
-  }
-
-  Future<bool?> _showDeleteConfirmation(
-    BuildContext context,
-    TransactionItem item,
-  ) async {
-    final isTransfer = item.transferPartnerId != null ||
-        (item.note != null &&
-            (item.note!.startsWith('Transfer') ||
-                item.note!.contains('Transfer') ||
-                item.note!.startsWith('Dari ') ||
-                item.note!.startsWith('Ke ')));
-
-    return showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Hapus Transaksi?',
-          style: GoogleFonts.plusJakartaSans(
-            fontWeight: FontWeight.w700,
-            fontSize: 18,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Hapus transaksi ini? Saldo akan dihitung ulang.',
-              style: GoogleFonts.plusJakartaSans(fontSize: 14),
-            ),
-            if (isTransfer) ...[
-              const SizedBox(height: 8),
-              Text(
-                'Transaksi ini terhubung dengan transfer. Kedua transaksi akan dihapus.',
-                style: GoogleFonts.plusJakartaSans(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.expense,
-                ),
-              ),
-            ],
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(
-              'Batal',
-              style: GoogleFonts.plusJakartaSans(
-                fontWeight: FontWeight.w600,
-                color: AppColors.lightTextSecondary,
-              ),
-            ),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.expense,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(
-              'Hapus',
-              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _handleDeleteTransaction(
-    BuildContext context,
-    WidgetRef ref,
-    TransactionItem tx,
-  ) async {
-    final confirm = await _showDeleteConfirmation(context, tx);
-    if (confirm == true && tx.id != null) {
-      final txRepo = ref.read(transactionRepositoryProvider);
-      await txRepo.deleteTransaction(tx.id!);
-      ref.invalidate(ledgerBalanceStreamProvider('saving'));
-      ref.invalidate(transactionsByLedgerStreamProvider('saving'));
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Transaksi berhasil dihapus',
-              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w600),
-            ),
-            backgroundColor: AppColors.darkAccent,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
     }
   }
 
@@ -605,111 +502,12 @@ class _SavingsLedgerScreenState extends ConsumerState<SavingsLedgerScreen> {
 
                         final tx = displayList[index];
                         final cat = categoryMap[tx.categoryId];
-                        final isExpense = tx.type == 'expense';
-                        final isIncome = tx.type == 'income';
 
-                        final iconData = cat != null
-                            ? IconHelper.getIconData(cat.icon)
-                            : (isExpense
-                                ? Icons.arrow_upward_rounded
-                                : Icons.arrow_downward_rounded);
-                        final color = isExpense
-                            ? AppColors.expense
-                            : (isIncome ? AppColors.income : const Color(0xFF6366F1));
-
-                        return AppCard(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          padding: const EdgeInsets.all(14),
+                        return TransactionListItem(
+                          transaction: tx,
+                          category: cat,
                           onTap: () =>
                               context.push('/tambah-transaksi', extra: tx),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 44,
-                                height: 44,
-                                decoration: BoxDecoration(
-                                  color: color.withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Icon(iconData, color: color, size: 22),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      cat?.name ??
-                                          (tx.note?.isNotEmpty == true
-                                              ? tx.note!
-                                              : 'Setoran Tabungan'),
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 14,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 3),
-                                    Text(
-                                      formatTanggal(tx.date),
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 11,
-                                        color: isDark
-                                            ? AppColors.darkTextSecondary
-                                            : AppColors.lightTextSecondary,
-                                      ),
-                                    ),
-                                    if (tx.note != null &&
-                                        tx.note!.isNotEmpty &&
-                                        cat?.name != tx.note) ...[
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        tx.note!,
-                                        style: GoogleFonts.plusJakartaSans(
-                                          fontSize: 11,
-                                          fontStyle: FontStyle.italic,
-                                          color: isDark
-                                              ? AppColors.darkTextSecondary
-                                              : AppColors.lightTextSecondary,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                              MoneyText(
-                                amount: tx.amount,
-                                duit: 'tabungan',
-                                prefix: isExpense ? '-' : (isIncome ? '+' : ''),
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 14,
-                                  color: color,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              IconButton(
-                                icon: Icon(
-                                  Icons.delete_outline_rounded,
-                                  size: 19,
-                                  color: isDark
-                                      ? AppColors.darkTextSecondary
-                                      : AppColors.lightTextSecondary,
-                                ),
-                                tooltip: 'Hapus Transaksi',
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(
-                                  minWidth: 28,
-                                  minHeight: 28,
-                                ),
-                                onPressed: () =>
-                                    _handleDeleteTransaction(context, ref, tx),
-                              ),
-                            ],
-                          ),
                         );
                       },
                       childCount: displayList.length + (hasMore ? 1 : 0),

@@ -8,7 +8,6 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_labels.dart';
 import '../../../core/models/duit_type.dart';
 import '../../../core/providers/app_state_provider.dart';
-import '../../../core/utils/formatters.dart';
 import '../../../core/utils/icon_helper.dart';
 import '../../../core/widgets/atur_saldo_sheet.dart';
 import '../../../core/widgets/widgets.dart';
@@ -1324,80 +1323,17 @@ class HomeScreen extends ConsumerWidget {
             itemBuilder: (context, index) {
               final item = transactions[index];
               final category = categoryMap[item.categoryId];
-              final catName = category?.name ?? 'Umum';
-              final catIcon = category != null
-                  ? IconHelper.getIconData(category.icon)
-                  : Icons.receipt_rounded;
-              final catColor = category != null
-                  ? IconHelper.parseColor(category.colorHex)
-                  : AppColors.primary;
-              final isIncome = item.type == 'income';
 
               return AnimatedListItem(
                 index: index,
-                child: AppCard(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
+                child: TransactionListItem(
+                  transaction: item,
+                  category: category,
+                  showDelete: false,
+                  enableSwipe: true,
                   onTap: () {
                     context.push('/tambah-transaksi', extra: item);
                   },
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: catColor.withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(catIcon, color: catColor, size: 22),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              catName,
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700,
-                                color: isDark
-                                    ? AppColors.darkTextPrimary
-                                    : AppColors.lightTextPrimary,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              item.note != null && item.note!.isNotEmpty
-                                  ? '${formatTanggalSingkat(item.date)} • ${item.note}'
-                                  : formatTanggalSingkat(item.date),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.plusJakartaSans(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: isDark
-                                    ? AppColors.darkTextSecondary
-                                    : AppColors.lightTextSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      MoneyText(
-                        amount: item.amount,
-                        prefix: isIncome ? '+ ' : '- ',
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: isIncome ? AppColors.income : AppColors.expense,
-                        ),
-                      ),
-                    ],
-                  ),
                 ),
               );
             },

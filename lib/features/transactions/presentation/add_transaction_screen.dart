@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/category_constants.dart';
 import '../../../core/models/duit_type.dart';
 import '../../../core/providers/app_state_provider.dart';
 import '../../../core/utils/currency_input_formatter.dart';
@@ -77,11 +78,12 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                   }
 
                   final catRepo = ref.read(categoryRepositoryProvider);
+                  final fallbackHex = CategoryConstants.getFallbackColorHex(name);
                   final newId = await catRepo.insertCategory(
                     CategoryItem(
                       name: name,
                       icon: 'star_rounded',
-                      colorHex: '#F59E0B',
+                      colorHex: fallbackHex,
                       type: _type,
                       ledger: _ledger,
                     ),
@@ -113,11 +115,19 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         builder: (ctx, setDialogState) {
           return AlertDialog(
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: const Text('Buat Target Impian Baru'),
+            title: const Text('Buat Target Baru'),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Text(
+                  'Tentukan target impian Anda sebelum mulai menyetor.',
+                  style: GoogleFonts.plusJakartaSans(
+                    fontSize: 12,
+                    color: AppColors.lightTextSecondary,
+                  ),
+                ),
+                const SizedBox(height: 12),
                 const Text('Nama Target:'),
                 const SizedBox(height: 6),
                 TextField(
@@ -128,7 +138,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text('Nominal Target:'),
+                const Text('Nominal Target yang Ingin Dicapai:'),
                 const SizedBox(height: 6),
                 TextField(
                   controller: targetCtrl,
@@ -349,6 +359,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
         amount: amount,
         sourceWalletId: _deductFromWallet ? _selectedWalletId : null,
         note: note,
+        date: _selectedDate,
       );
     } else {
       final tx = TransactionItem(
@@ -441,7 +452,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
 
               // 3. Input Nominal Besar
               Text(
-                'Nominal Transaksi',
+                _ledger == 'goal' ? 'Nominal Setoran' : 'Nominal Transaksi',
                 style: GoogleFonts.plusJakartaSans(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -894,7 +905,19 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
               itemBuilder: (context, index) {
                 final cat = filtered[index];
                 final isSelected = cat.id == _selectedCategoryId;
-                final catColor = IconHelper.parseColor(cat.colorHex);
+                final Color catColor;
+                if (cat.colorHex.isNotEmpty &&
+                    cat.colorHex != '#6B7280' &&
+                    cat.colorHex != '#B2BEC3') {
+                  catColor = IconHelper.parseColor(cat.colorHex);
+                } else if (cat.name.toLowerCase() == 'lainnya') {
+                  catColor = const Color(0xFFB2BEC3);
+                } else {
+                  catColor = CategoryConstants.getFallbackColor(
+                    cat.name,
+                    id: cat.id,
+                  );
+                }
 
                 return GestureDetector(
                   onTap: () {
@@ -914,21 +937,19 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                           shape: BoxShape.circle,
                           color: isSelected
                               ? catColor
-                              : (isDark
-                                  ? AppColors.darkCard
-                                  : catColor.withOpacity(0.12)),
+                              : catColor.withOpacity(isDark ? 0.22 : 0.14),
                           border: Border.all(
                             color: isSelected
                                 ? (isDark
                                     ? Colors.white
                                     : AppColors.darkAccent)
-                                : Colors.transparent,
-                            width: 2.5,
+                                : catColor.withOpacity(isDark ? 0.35 : 0.22),
+                            width: isSelected ? 2.5 : 1.2,
                           ),
                           boxShadow: isSelected
                               ? [
                                   BoxShadow(
-                                    color: catColor.withOpacity(0.4),
+                                    color: catColor.withOpacity(0.45),
                                     blurRadius: 8,
                                     offset: const Offset(0, 3),
                                   ),
@@ -937,9 +958,7 @@ class _AddTransactionScreenState extends ConsumerState<AddTransactionScreen> {
                         ),
                         child: Icon(
                           IconHelper.getIconData(cat.icon),
-                          color: isSelected
-                              ? Colors.white
-                              : (isDark ? Colors.white70 : catColor),
+                          color: isSelected ? Colors.white : catColor,
                           size: 26,
                         ),
                       ),

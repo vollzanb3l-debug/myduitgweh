@@ -88,48 +88,50 @@ class DriftTransactionRepository implements TransactionRepository {
 
       int deletedCount = 0;
 
-      // 1. Cek apakah ada transferPartnerId terhubung
+      // 1. Ambil transaksi pasangan (transfer / potong antar-duit) jika ada
+      TransactionItem? partner;
       if (tx.transferPartnerId != null) {
-        final partnerId = tx.transferPartnerId!;
-        deletedCount += await (db.delete(db.transactions)
-              ..where((t) => t.id.equals(partnerId)))
-            .go();
+        partner = await getTransactionById(tx.transferPartnerId!);
       } else {
-        // Fallback untuk transfer lama: cocokkan waktu, nominal, dan note transfer
+        // Fallback untuk transfer / potong catatan lama
         final note = tx.note ?? '';
-        if (note.startsWith('Transfer ke ') || note.startsWith('Transfer dari ')) {
-          final isOut = tx.type == 'expense';
-          final targetType = isOut ? 'income' : 'expense';
-          final partner = await (db.select(db.transactions)
+        if (note.startsWith('Transfer ke ') ||
+            note.startsWith('Transfer dari ') ||
+            note.startsWith('Setor impian: ') ||
+            note.startsWith('Menabung target: ')) {
+          final targetType = tx.type == 'expense' ? 'income' : 'expense';
+          partner = await (db.select(db.transactions)
                 ..where((t) =>
                     t.id.isNotValue(id) &
                     t.type.equals(targetType) &
                     t.amount.equals(tx.amount) &
                     t.date.equals(tx.date)))
-              .getSingleOrNull();
-
-          if (partner != null) {
-            deletedCount += await (db.delete(db.transactions)
-                  ..where((t) => t.id.equals(partner.id)))
-                .go();
-          }
+              .getSingleOrNull()
+              .then((r) => r != null ? _toItem(r) : null);
         }
       }
 
-      // 2. Jika terkait target impian (goal), sesuaikan progress target
-      if (tx.goalId != null && _savingGoalRepository != null) {
-        final goal = await _savingGoalRepository.getSavingGoalById(tx.goalId!);
+      // 2. Sesuaikan progres target pencapaian jika tx atau partner terkait target
+      final goalId = tx.goalId ?? partner?.goalId;
+      if (goalId != null && _savingGoalRepository != null) {
+        final goal = await _savingGoalRepository.getSavingGoalById(goalId);
         if (goal != null) {
-          if (tx.type == 'income' || tx.ledger == 'goal') {
-            final newAmount = (goal.currentAmount - tx.amount).clamp(0, goal.targetAmount * 2);
-            await _savingGoalRepository.updateSavingGoal(
-              goal.copyWith(currentAmount: newAmount),
-            );
-          }
+          final newAmount =
+              (goal.currentAmount - tx.amount).clamp(0, goal.targetAmount * 10);
+          await _savingGoalRepository.updateSavingGoal(
+            goal.copyWith(currentAmount: newAmount),
+          );
         }
       }
 
-      // 3. Hapus transaksi utama
+      // 3. Hapus transaksi pasangan jika ditemukan
+      if (partner != null && partner.id != null) {
+        deletedCount += await (db.delete(db.transactions)
+              ..where((t) => t.id.equals(partner!.id!)))
+            .go();
+      }
+
+      // 4. Hapus transaksi utama
       deletedCount += await (db.delete(db.transactions)
             ..where((t) => t.id.equals(id)))
           .go();

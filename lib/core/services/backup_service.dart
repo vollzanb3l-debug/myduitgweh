@@ -16,6 +16,7 @@ import '../../data/repositories/transaction_repository.dart';
 import '../../data/repositories/wallet_repository.dart';
 import '../../data/repositories/providers.dart';
 import '../constants/backup_constants.dart';
+import '../constants/category_constants.dart';
 import '../providers/app_state_provider.dart';
 import 'preferences_service.dart';
 
@@ -386,7 +387,11 @@ class BackupService {
         final finalName = (name != null && name.isNotEmpty) ? name : 'Lainnya';
         final type = (item['type'] as String?) ?? 'expense';
         final icon = (item['icon'] as String?) ?? 'category_rounded';
-        final colorHex = (item['colorHex'] as String?) ?? '#6B7280';
+        final rawColor = (item['color_hex'] as String?) ?? (item['colorHex'] as String?);
+        final colorHex = (rawColor != null && rawColor.isNotEmpty)
+            ? rawColor
+            : CategoryConstants.getFallbackColorHex(finalName, id: id);
+        final ledger = (item['ledger'] as String?) ?? 'daily';
 
         final cat = CategoryItem(
           id: id,
@@ -394,6 +399,7 @@ class BackupService {
           icon: icon,
           colorHex: colorHex,
           type: type == 'income' ? 'income' : 'expense',
+          ledger: ledger,
         );
 
         validCategories.add(cat);

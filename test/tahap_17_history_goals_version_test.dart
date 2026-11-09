@@ -299,8 +299,8 @@ void main() {
 
     // 4. VERSI APLIKASI: pubspec.yaml, AboutText, dan BackupConstants sinkron
     test('(Poin 4) Versi aplikasi terpusat pada AboutText dan sinkron dengan BackupConstants', () {
-      expect(AboutText.appVersion, equals('1.0.1'));
-      expect(BackupConstants.currentAppVersion, equals('1.0.1'));
+      expect(AboutText.appVersion, isNotEmpty);
+      expect(BackupConstants.currentAppVersion, equals(AboutText.appVersion));
       expect(BackupConstants.currentBackupVersion, equals(3));
     });
   });

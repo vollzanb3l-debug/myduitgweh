@@ -5,6 +5,7 @@ import 'package:drift/native.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
+import '../../core/constants/category_constants.dart';
 import 'tables.dart';
 import 'initial_data.dart';
 
@@ -15,7 +16,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -122,6 +123,70 @@ class AppDatabase extends _$AppDatabase {
                 type: c.type,
                 ledger: Value(c.ledger),
               ),
+            );
+          }
+        }
+      }
+      if (from < 7) {
+        // Tahap 18: Pulihkan pemisahan kategori per Duit, kembalikan warna & ikon ke tabel terpusat,
+        // alihkan transaksi dari kategori duplikat secara aman, dan berikan fallback warna cerah untuk kustom.
+        const defaultDefs = CategoryConstants.allDefaultCategories;
+        final currentCategories = await select(categories).get();
+
+        // 1. Identifikasi dan perbaiki kategori standar yang salah ledger atau duplikat
+        for (final def in defaultDefs) {
+          final matches = currentCategories.where(
+            (c) => c.name.toLowerCase() == def.name.toLowerCase() && c.type == def.type,
+          ).toList();
+
+          if (matches.isEmpty) {
+            await into(categories).insert(
+              CategoriesCompanion.insert(
+                name: def.name,
+                icon: def.icon,
+                colorHex: def.colorHex,
+                type: def.type,
+                ledger: Value(def.ledger),
+              ),
+            );
+          } else {
+            Category? correctMatch;
+            for (final m in matches) {
+              if (m.ledger == def.ledger) {
+                correctMatch = m;
+                break;
+              }
+            }
+
+            final primary = correctMatch ?? matches.first;
+
+            await (update(categories)..where((c) => c.id.equals(primary.id))).write(
+              CategoriesCompanion(
+                ledger: Value(def.ledger),
+                icon: Value(def.icon),
+                colorHex: Value(def.colorHex),
+              ),
+            );
+
+            for (final m in matches) {
+              if (m.id != primary.id) {
+                await (update(transactions)..where((t) => t.categoryId.equals(m.id))).write(
+                  TransactionsCompanion(categoryId: Value(primary.id)),
+                );
+                await (delete(categories)..where((c) => c.id.equals(m.id))).go();
+              }
+            }
+          }
+        }
+
+        // 2. Beri warna fallback cerah untuk kategori kustom yang belum berwarna / abu-abu mati
+        final remainingCats = await select(categories).get();
+        for (final cat in remainingCats) {
+          final isLainnya = cat.name.toLowerCase() == 'lainnya';
+          if (!isLainnya && (cat.colorHex.isEmpty || cat.colorHex == '#6B7280' || cat.colorHex == '#B2BEC3')) {
+            final fallbackColor = CategoryConstants.getFallbackColorHex(cat.name, id: cat.id);
+            await (update(categories)..where((c) => c.id.equals(cat.id))).write(
+              CategoriesCompanion(colorHex: Value(fallbackColor)),
             );
           }
         }
